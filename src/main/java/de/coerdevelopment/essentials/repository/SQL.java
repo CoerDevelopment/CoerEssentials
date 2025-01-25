@@ -10,7 +10,7 @@ public class SQL {
         return instance;
     }
 
-    public static SQL newSQL(String host, String username, String password, String database, String port) {
+    public static SQL newSQL(String host, String username, String password, String database, int port, String type) {
         if (instance != null) { // close old connection and use new connection
             try {
                 instance.disconnect();
@@ -22,38 +22,36 @@ public class SQL {
             instance.password = password;
             instance.database = database;
             instance.port = port;
+            instance.type = type;
         } else {
-            instance = new SQL(host, username, password, database, port);
+            instance = new SQL(host, username, password, database, port, type);
         }
         return instance;
     }
 
+    private String type;
     private String host;
     private String username;
     private String password;
     private String database;
-    private String port;
+    private int port;
 
     private Connection connection;
 
-    private SQL(String host, String username, String password, String database, String port) {
+    private SQL(String host, String username, String password, String database, int port, String type) {
         this.host = host;
         this.username = username;
         this.password = password;
         this.database = database;
         this.port = port;
+        this.type = type;
     }
 
     public void connect() throws SQLException, ClassNotFoundException {
         if (isConnected()) {
             return;
         }
-        connection = DriverManager.getConnection("jdbc:mariadb://" + host + ":" + port + "/" + database + "?useUnicode=true&autoReconnect=true", username, password);
-        if (isConnected()) {
-            System.out.println("Successfully connected to database!");
-        } else {
-            System.err.println("Couldn't connect to database!");
-        }
+        connection = DriverManager.getConnection(getDriver() + host + ":" + port + "/" + database + "?useUnicode=true&autoReconnect=true", username, password);
     }
 
     public void disconnect() throws SQLException {
@@ -104,6 +102,16 @@ public class SQL {
 
     public synchronized Connection getConnection() {
         return connection;
+    }
+
+    public String getDriver() {
+        if (type.toLowerCase().equals("mysql")) {
+            return "jdbc:mysql://";
+        } else if (type.toLowerCase().equals("mariadb")) {
+            return "jdbc:mariadb://";
+        } else {
+            throw new RuntimeException("Unsupported database type: " + type);
+        }
     }
 
 }
