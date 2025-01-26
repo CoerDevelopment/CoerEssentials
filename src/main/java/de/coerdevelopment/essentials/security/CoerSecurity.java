@@ -25,6 +25,11 @@ public class CoerSecurity {
         return instance;
     }
 
+    public static CoerSecurity newInstance(String algorithm, int saltLength, long tokenExpiration) {
+        instance = new CoerSecurity(algorithm, saltLength, tokenExpiration);
+        return instance;
+    }
+
     private final String ALGORITHM;
     private final int SALT_LENGTH;
     private final long TOKEN_EXPIRATION;
@@ -38,9 +43,9 @@ public class CoerSecurity {
         instance = this;
     }
 
-    public String createToken(String subject) {
+    public String createToken(String subject, long expiration) {
         Date now = new Date();
-        Date expirationDate = new Date(now.getTime() + TOKEN_EXPIRATION);
+        Date expirationDate = new Date(now.getTime() + expiration);
         String token = Jwts.builder()
                 .setSubject(subject)
                 .setIssuedAt(now)
@@ -50,8 +55,16 @@ public class CoerSecurity {
         return token;
     }
 
+    public String createToken(String subject) {
+        return createToken(subject, TOKEN_EXPIRATION);
+    }
+
     public String createToken(int subject) {
         return createToken(String.valueOf(subject));
+    }
+
+    public String createToken(int subject, long expiration) {
+        return createToken(String.valueOf(subject), expiration);
     }
 
     public String getStringFromToken(String token) {
@@ -100,5 +113,5 @@ public class CoerSecurity {
         }
         return null;
     }
-    
+
 }

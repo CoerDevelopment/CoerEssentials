@@ -88,7 +88,7 @@ public abstract class Module {
     }
 
     public Long getLongOption(String key) {
-        return (long) options.get(key);
+        return Long.valueOf(String.valueOf(options.get(key)));
     }
 
     public Object getOption(String key) {

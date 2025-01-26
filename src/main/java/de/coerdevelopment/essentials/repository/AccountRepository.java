@@ -62,6 +62,63 @@ public class AccountRepository extends Repository {
         }
     }
 
+    public int getAccountIdByMail(String mail) {
+        try {
+            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT accountId FROM " + tableName + " WHERE mail = ?");
+            ps.setString(1, mail);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("accountId");
+            }
+            return -1;
+        } catch (SQLException e) {
+        } finally {
+            throw new IllegalStateException("Could not get account id by mail");
+        }
+    }
+
+    public boolean doesMailExists(String mail) {
+        try {
+            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT accountId FROM " + tableName + " WHERE mail = ?");
+            ps.setString(1, mail);
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+        } finally {
+            throw new IllegalStateException("Could not check if mail exists");
+        }
+    }
+
+    public String getMail(int accountId) {
+        try {
+            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT mail FROM " + tableName + " WHERE accountId = ?");
+            ps.setInt(1, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getString("mail");
+            }
+            return null;
+        } catch (SQLException e) {
+        } finally {
+            throw new IllegalStateException("Could not get mail");
+        }
+    }
+
+    public boolean isMailVerified(int accountId) {
+        try {
+            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT mailVerified FROM " + tableName + " WHERE accountId = ?");
+            ps.setInt(1, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getBoolean("mailVerified");
+            }
+            return false;
+        } catch (SQLException e) {
+        } finally {
+            throw new IllegalStateException("Could not check if mail is verified");
+        }
+    }
+
     public void setMailVerified(int accountId, boolean mailVerified) {
         try {
             PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET mailVerified = ? WHERE accountId = ?");
@@ -106,16 +163,24 @@ public class AccountRepository extends Repository {
         }
     }
 
-    public boolean doesPasswordMatch(int accountId, String password) {
+    /**
+     * Checks if the given credentials are correct and returns the accountId if they are
+     * Otherwise an exception is thrown
+     */
+    public int getAccountIdIfPasswortMatches(String mail, String password) throws Exception {
         try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT password, salt FROM " + tableName + " WHERE accountId = ?");
-            ps.setInt(1, accountId);
+            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT accountId, password, salt FROM " + tableName + " WHERE mail = ?");
+            ps.setString(1, mail);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 String dbPassword = rs.getString("password");
                 String dbSalt = rs.getString("salt");
                 String hashedPassword = CoerSecurity.getInstance().stringToHash(password + dbSalt);
-                return dbPassword.equals(hashedPassword);
+                if (dbPassword.equals(hashedPassword)) {
+                    return rs.getInt("accountId");
+                } else {
+                    throw new Exception("Password does not match");
+                }
             }
         } catch (SQLException e) {
         } finally {

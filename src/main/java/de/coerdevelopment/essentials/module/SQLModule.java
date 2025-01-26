@@ -4,17 +4,15 @@ import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.repository.Repository;
 import de.coerdevelopment.essentials.repository.SQL;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class SQLModule extends Module {
 
-    private Set<Repository> repoWithTablesToCreate;
+    private List<Repository> repoWithTablesToCreate;
 
     public SQLModule() {
         super(ModuleType.SQL);
-        this.repoWithTablesToCreate = new TreeSet<>();
+        this.repoWithTablesToCreate = new ArrayList<>();
     }
 
     public void registerTableCreateRepository(Repository repository) {

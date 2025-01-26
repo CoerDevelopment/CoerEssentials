@@ -1,5 +1,6 @@
 package de.coerdevelopment.essentials.module;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,18 +21,7 @@ public enum ModuleType {
             "password", "password",
             "fromMail", "from"
     ), List.of()),
-    ACCOUNT("Account", Map.of(
-            "tableName", "Account",
-            "saltLenght", 16,
-            "hashAlgorithm", "SHA-256",
-            "mailConfirmationEnabled", true,
-            "mailConfirmationTokenLength", 8,
-            "mailConfirmationTokenExpirationMilliseconds", 1000 * 60 * 60,
-            "passwordResetExpirationMilliseconds", 1000 * 60 * 30,
-            "tokenExpirationMilliseconds", 1000 * 60 * 60 * 24,
-            "maxLoginTriesInShortTime", 10,
-            "maxPasswordResetTriesInShortTime", 3
-    ), List.of(SQL, MAIL));
+    ACCOUNT("Account", getAccountOptions(), List.of(SQL, MAIL));
 
     public String name;
     public Map<String, Object> options;
@@ -41,5 +31,21 @@ public enum ModuleType {
         this.name = name;
         this.options = options;
         this.dependencies = dependencies;
+    }
+
+    private static Map<String, Object> getAccountOptions() {
+        Map<String, Object> options = new HashMap<>();
+        options.put("tableName", "Account");
+        options.put("saltLength", 16);
+        options.put("hashAlgorithm", "SHA-256");
+        options.put("mailConfirmationEnabled", true);
+        options.put("mailConfirmationTokenLength", 8);
+        options.put("mailConfirmationTokenExpirationMilliseconds", 1000 * 60 * 60);
+        options.put("passwordResetExpirationMilliseconds", 1000 * 60 * 30);
+        options.put("tokenExpirationMilliseconds", 1000 * 60 * 60 * 24);
+        options.put("maxLoginTriesInShortTime", 10);
+        options.put("maxPasswordResetTriesInShortTime", 3);
+        options.put("resetPasswordUrl", "https://sample.com/resetPassword?%token%");
+        return options;
     }
 }

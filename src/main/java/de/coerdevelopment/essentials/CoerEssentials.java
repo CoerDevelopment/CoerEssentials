@@ -12,17 +12,27 @@ public class CoerEssentials {
 
     public static CoerEssentials getInstance() {
         if (instance == null) {
-            instance = new CoerEssentials();
+            instance = new CoerEssentials("Sample Programm");
         }
         return instance;
     }
 
+    public static CoerEssentials newInstance(String programName) {
+        instance = new CoerEssentials(programName);
+        return instance;
+    }
+
+    /**
+     * Name of the program which uses this framework
+     */
+    private String programName;
     public String configDirectory;
     private System.Logger logger;
 
-    private CoerEssentials() {
+    private CoerEssentials(String programName) {
         configDirectory = System.getProperty("user.home") + "/CoerEssentials/";
         logger = System.getLogger("CoerEssentials");
+        this.programName = programName;
     }
 
     public Module enableModule(ModuleType moduleType) {
@@ -40,6 +50,10 @@ public class CoerEssentials {
             }
         }
         return null;
+    }
+
+    public String getProgramName() {
+        return programName;
     }
 
     // Logging
