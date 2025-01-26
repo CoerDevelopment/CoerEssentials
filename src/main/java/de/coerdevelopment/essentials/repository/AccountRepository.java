@@ -41,6 +41,7 @@ public class AccountRepository extends Repository {
                     "mailVerificationCode VARCHAR(64)," +
                     "mailVerificationCodeExpiration BIGINT" +
                     ")");
+            ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -57,9 +58,9 @@ public class AccountRepository extends Repository {
                 return rs.getInt(1);
             }
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not insert account");
+
         }
+        return -1;
     }
 
     public int getAccountIdByMail(String mail) {
@@ -70,11 +71,10 @@ public class AccountRepository extends Repository {
             if (rs.next()) {
                 return rs.getInt("accountId");
             }
-            return -1;
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not get account id by mail");
+            e.printStackTrace();
         }
+        return -1;
     }
 
     public boolean doesMailExists(String mail) {
@@ -84,9 +84,9 @@ public class AccountRepository extends Repository {
             ResultSet rs = ps.executeQuery();
             return rs.next();
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not check if mail exists");
+            e.printStackTrace();
         }
+        return false;
     }
 
     public String getMail(int accountId) {
@@ -97,11 +97,10 @@ public class AccountRepository extends Repository {
             if (rs.next()) {
                 return rs.getString("mail");
             }
-            return null;
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not get mail");
+            e.printStackTrace();
         }
+        return null;
     }
 
     public boolean isMailVerified(int accountId) {
@@ -112,11 +111,10 @@ public class AccountRepository extends Repository {
             if (rs.next()) {
                 return rs.getBoolean("mailVerified");
             }
-            return false;
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not check if mail is verified");
+            e.printStackTrace();
         }
+        return false;
     }
 
     public void setMailVerified(int accountId, boolean mailVerified) {
@@ -126,8 +124,7 @@ public class AccountRepository extends Repository {
             ps.setInt(2, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not update mail verification");
+            e.printStackTrace();
         }
     }
 
@@ -139,8 +136,7 @@ public class AccountRepository extends Repository {
             ps.setInt(3, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not update mail verification code");
+            e.printStackTrace();
         }
     }
 
@@ -158,9 +154,9 @@ public class AccountRepository extends Repository {
                 return dbMailVerificationCode.equals(mailVerificationCode);
             }
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not check mail verification code");
+            e.printStackTrace();
         }
+        return false;
     }
 
     /**
@@ -183,9 +179,9 @@ public class AccountRepository extends Repository {
                 }
             }
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not check password");
+            e.printStackTrace();
         }
+        return -1;
     }
 
     public void changePassword(int accountId, String password, String salt) {
@@ -196,8 +192,7 @@ public class AccountRepository extends Repository {
             ps.setInt(3, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not change password");
+            e.printStackTrace();
         }
     }
 
@@ -208,8 +203,7 @@ public class AccountRepository extends Repository {
             ps.setInt(2, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not update first name");
+            e.printStackTrace();
         }
     }
 
@@ -220,8 +214,7 @@ public class AccountRepository extends Repository {
             ps.setInt(2, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not update last name");
+            e.printStackTrace();
         }
     }
 
@@ -232,8 +225,7 @@ public class AccountRepository extends Repository {
             ps.setInt(2, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not update username");
+            e.printStackTrace();
         }
     }
 
@@ -253,9 +245,9 @@ public class AccountRepository extends Repository {
                 );
             }
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not get account");
+            e.printStackTrace();
         }
+        return null;
     }
 
     public void deleteAccount(int accountId) {
@@ -264,8 +256,7 @@ public class AccountRepository extends Repository {
             ps.setInt(1, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
-        } finally {
-            throw new IllegalStateException("Could not delete account");
+            e.printStackTrace();
         }
     }
 

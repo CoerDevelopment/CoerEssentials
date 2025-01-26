@@ -8,15 +8,8 @@ import java.util.*;
 
 public class SQLModule extends Module {
 
-    private List<Repository> repoWithTablesToCreate;
-
     public SQLModule() {
         super(ModuleType.SQL);
-        this.repoWithTablesToCreate = new ArrayList<>();
-    }
-
-    public void registerTableCreateRepository(Repository repository) {
-        repoWithTablesToCreate.add(repository);
     }
 
     /**
@@ -35,11 +28,7 @@ public class SQLModule extends Module {
             sql.connect();
             Runtime.getRuntime().addShutdownHook(disconnectOnShutdownThread());
             CoerEssentials.getInstance().logInfo("Successfully established connection to SQL database.");
-            boolean connected = sql.isConnected();
-            if (connected) {
-                createTables();
-            }
-            return connected;
+            return sql.isConnected();
         } catch (Exception e) {
             CoerEssentials.getInstance().logError("Error establishing connection to SQL database.");
             CoerEssentials.getInstance().logError("Check the login data in the config file: " + moduleConfig.getFilePath());
@@ -58,12 +47,6 @@ public class SQLModule extends Module {
                 CoerEssentials.getInstance().logError("Error: " + e.getMessage());
             }
         });
-    }
-
-    private void createTables() {
-        for (Repository repository : repoWithTablesToCreate) {
-            repository.createTable();
-        }
     }
 
 }

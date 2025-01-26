@@ -1,6 +1,7 @@
 package de.coerdevelopment.essentials.module;
 
 import de.coerdevelopment.essentials.CoerEssentials;
+import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.repository.AccountRepository;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 
@@ -38,7 +39,7 @@ public class AccountModule extends Module {
 
         this.accountRepository = new AccountRepository(tableName);
         SQLModule sqlModule = (SQLModule) Module.getModule(ModuleType.SQL);
-        sqlModule.registerTableCreateRepository(accountRepository);
+        accountRepository.createTable(); // create the account table if it does not exist®
         CoerSecurity.newInstance(hashAlgorithm, saltLength, tokenExpiration);
         this.mailModule = (MailModule) Module.getModule(ModuleType.MAIL);
     }
@@ -107,11 +108,16 @@ public class AccountModule extends Module {
             return;
         }
 
+        // check if account exists and get mail
+        String mail = accountRepository.getMail(accountId);
+        if (mail == null) {
+            return;
+        }
+
         // generate new verification code
         String code = getVerificationCode();
         long expiration = System.currentTimeMillis() + mailVerificationCodeExpiration;
         accountRepository.setMailVerificationCode(accountId, code, expiration);
-        String mail = accountRepository.getMail(accountId);
 
         // send mail
         String programName = CoerEssentials.getInstance().getProgramName();
@@ -178,6 +184,34 @@ public class AccountModule extends Module {
         String passwordHash = CoerSecurity.getInstance().stringToHash(newPassword + salt);
         accountRepository.changePassword(accountId, passwordHash, salt);
         return true;
+    }
+
+    /**
+     * Sets the first name of the account
+     */
+    public void setFirstName(int accountId, String firstName) {
+        accountRepository.setFirstName(accountId, firstName);
+    }
+
+    /**
+     * Sets the last name of the account
+     */
+    public void setLastName(int accountId, String lastName) {
+        accountRepository.setLastName(accountId, lastName);
+    }
+
+    /**
+     * Sets the username of the account
+     */
+    public void setUsername(int accountId, String username) {
+        accountRepository.setUsername(accountId, username);
+    }
+
+    /**
+     * Returns the account with the given id
+     */
+    public Account getAccount(int accountId) {
+        return accountRepository.getAccount(accountId);
     }
 
     /**
