@@ -5,6 +5,8 @@ import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.repository.AccountRepository;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 
+import java.sql.Date;
+
 public class AccountModule extends Module {
 
     private AccountRepository accountRepository;
@@ -103,6 +105,9 @@ public class AccountModule extends Module {
      * Generates a new verification code and sends it to the mail of the given account
      */
     public void sendMailVerification(int accountId) {
+        if (!mailConfirmationEnabled) {
+            return;
+        }
         // check if the mail is already verified
         if (isMailVerified(accountId)) {
             return;
@@ -137,7 +142,7 @@ public class AccountModule extends Module {
         // if the code is expired, send a new one
         try {
             if (accountRepository.doesMailVerificationCodeMatch(accountId, verificationCode)) {
-                accountRepository.setMailVerified(accountId, true);
+                accountRepository.setMailVerified(accountId);
                 return true;
             } else {
                 return false;
@@ -186,25 +191,111 @@ public class AccountModule extends Module {
         return true;
     }
 
+    public void lockAccount(int accountId) {
+        accountRepository.setProperty(accountId, "isLocked", true);
+    }
+
+    public void unlockAccount(int accountId) {
+        accountRepository.setProperty(accountId, "isLocked", false);
+    }
+
+    public boolean isAccountLocked(int accountId) {
+        return accountRepository.isAccountLocked(accountId);
+    }
+
+    /**
+     * Sets the birthday of the account
+     */
+    public void setBirthday(int accountId, Date birthday) {
+        accountRepository.setProperty(accountId, "birthday", birthday);
+    }
+
     /**
      * Sets the first name of the account
      */
     public void setFirstName(int accountId, String firstName) {
-        accountRepository.setFirstName(accountId, firstName);
+        accountRepository.setProperty(accountId, "firstName", firstName);
     }
 
     /**
      * Sets the last name of the account
      */
     public void setLastName(int accountId, String lastName) {
-        accountRepository.setLastName(accountId, lastName);
+        accountRepository.setProperty(accountId, "lastName", lastName);
     }
 
     /**
      * Sets the username of the account
      */
     public void setUsername(int accountId, String username) {
-        accountRepository.setUsername(accountId, username);
+        accountRepository.setProperty(accountId, "username", username);
+    }
+
+    /**
+     * Sets the nationality of the account
+     */
+    public void setNationality(int accountId, String nationality) {
+        accountRepository.setProperty(accountId, "nationality", nationality);
+    }
+
+    /**
+     * Sets the location of the account
+     */
+    public void setLocation(int accountId, String location) {
+        accountRepository.setProperty(accountId, "location", location);
+    }
+
+    /**
+     * Sets the instagram Url of the account
+     */
+    public void setInstagramUrl(int accountId, String instagramUrl) {
+        accountRepository.setProperty(accountId, "instagramUrl", instagramUrl);
+    }
+
+    /**
+     * Sets the twitter Url of the account
+     */
+    public void setTwitterUrl(int accountId, String twitterUrl) {
+        accountRepository.setProperty(accountId, "twitterUrl", twitterUrl);
+    }
+
+    /**
+     * Sets the facebook Url of the account
+     */
+    public void setFacebookUrl(int accountId, String facebookUrl) {
+        accountRepository.setProperty(accountId, "facebookUrl", facebookUrl);
+    }
+
+    /**
+     * Sets the linkedin Url of the account
+     */
+    public void setLinkedinUrl(int accountId, String linkedinUrl) {
+        accountRepository.setProperty(accountId, "linkedinUrl", linkedinUrl);
+    }
+
+    /**
+     * Sets the website Url of the account
+     */
+    public void setWebsiteUrl(int accountId, String websiteUrl) {
+        accountRepository.setProperty(accountId, "websiteUrl", websiteUrl);
+    }
+
+    /**
+     * Sets the about me text of the account
+     */
+    public void setAboutMe(int accountId, String aboutMe) {
+        accountRepository.setProperty(accountId, "aboutMe", aboutMe);
+    }
+
+    /**
+     * Sets the profile picture Url of the account
+     */
+    public void setProfilePictureUrl(int accountId, String profilePictureUrl) {
+        accountRepository.setProperty(accountId, "profilePictureUrl", profilePictureUrl);
+    }
+
+    public void setPrivateStatus(int accountId, boolean isPrivate) {
+        accountRepository.setProperty(accountId, "isPrivate", isPrivate);
     }
 
     /**

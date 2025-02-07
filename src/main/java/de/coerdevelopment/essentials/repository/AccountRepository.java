@@ -3,6 +3,7 @@ package de.coerdevelopment.essentials.repository;
 import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -34,9 +35,22 @@ public class AccountRepository extends Repository {
                     "mail VARCHAR(128) NOT NULL UNIQUE," +
                     "password VARCHAR(64) NOT NULL," +
                     "salt VARCHAR(64) NOT NULL," +
+                    "createdDate DATE NOT NULL," +
+                    "isLocked BOOLEAN NOT NULL DEFAULT FALSE," +
+                    "birthday DATE," +
                     "firstName VARCHAR(64)," +
                     "lastName VARCHAR(64)," +
                     "username VARCHAR(32) UNIQUE," +
+                    "nationality VARCHAR(64)," +
+                    "location VARCHAR(64)," +
+                    "instagramUrl VARCHAR(128)," +
+                    "twitterUrl VARCHAR(128)," +
+                    "facebookUrl VARCHAR(128)," +
+                    "linkedInUrl VARCHAR(128)," +
+                    "websiteUrl VARCHAR(128)," +
+                    "aboutMe VARCHAR(256)," +
+                    "profilePictureUrl VARCHAR(256)," +
+                    "isPrivate BOOLEAN NOT NULL DEFAULT FALSE," +
                     "mailVerified BOOLEAN NOT NULL DEFAULT false," +
                     "mailVerificationCode VARCHAR(64)," +
                     "mailVerificationCodeExpiration BIGINT" +
@@ -49,16 +63,18 @@ public class AccountRepository extends Repository {
 
     public int insertAccount(String mail, String password, String salt) {
         try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("INSERT INTO " + tableName + " (mail, password, salt, mailVerified) VALUES (?, ?, ?, ?)", PreparedStatement.RETURN_GENERATED_KEYS);
+            PreparedStatement ps = sql.getConnection().prepareStatement("INSERT INTO " + tableName + " (mail, password, salt, createdDate) VALUES (?, ?, ?, ?)", PreparedStatement.RETURN_GENERATED_KEYS);
             ps.setString(1, mail);
             ps.setString(2, password);
             ps.setString(3, salt);
+            ps.setDate(4, new java.sql.Date(System.currentTimeMillis()));
+            ps.execute();
             ResultSet rs = ps.getGeneratedKeys();
             if (rs.next()) {
                 return rs.getInt(1);
             }
         } catch (SQLException e) {
-
+            e.printStackTrace();
         }
         return -1;
     }
@@ -117,10 +133,10 @@ public class AccountRepository extends Repository {
         return false;
     }
 
-    public void setMailVerified(int accountId, boolean mailVerified) {
+    public void setMailVerified(int accountId) {
         try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET mailVerified = ? WHERE accountId = ?");
-            ps.setBoolean(1, mailVerified);
+            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET mailVerified = ?, mailVerificationCode = null, mailVerificationCodeExpiration = null  WHERE accountId = ?");
+            ps.setBoolean(1, true);
             ps.setInt(2, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
@@ -165,7 +181,7 @@ public class AccountRepository extends Repository {
      */
     public int getAccountIdIfPasswortMatches(String mail, String password) throws Exception {
         try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT accountId, password, salt FROM " + tableName + " WHERE mail = ?");
+            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT accountId, password, salt FROM " + tableName + " WHERE mail = ? AND isLocked = false");
             ps.setString(1, mail);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -196,10 +212,10 @@ public class AccountRepository extends Repository {
         }
     }
 
-    public void setFirstName(int accountId, String firstName) {
+    public void setProperty(int accountId, String property, Object value) {
         try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET firstName = ? WHERE accountId = ?");
-            ps.setString(1, firstName);
+            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET " + property + " = ? WHERE accountId = ?");
+            ps.setObject(1, value);
             ps.setInt(2, accountId);
             ps.executeUpdate();
         } catch (SQLException e) {
@@ -207,26 +223,18 @@ public class AccountRepository extends Repository {
         }
     }
 
-    public void setLastName(int accountId, String lastName) {
+    public boolean isAccountLocked(int accountId) {
         try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET lastName = ? WHERE accountId = ?");
-            ps.setString(1, lastName);
-            ps.setInt(2, accountId);
-            ps.executeUpdate();
+            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT isLocked FROM " + tableName + " WHERE accountId = ?");
+            ps.setInt(1, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getBoolean("isLocked");
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
-
-    public void setUsername(int accountId, String username) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET username = ? WHERE accountId = ?");
-            ps.setString(1, username);
-            ps.setInt(2, accountId);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        return false;
     }
 
     public Account getAccount(int accountId) {
@@ -238,9 +246,21 @@ public class AccountRepository extends Repository {
                 return new Account(
                         rs.getInt("accountId"),
                         rs.getString("mail"),
+                        rs.getDate("createdDate"),
+                        rs.getDate("birthday"),
                         rs.getString("firstName"),
                         rs.getString("lastName"),
                         rs.getString("username"),
+                        rs.getString("nationality"),
+                        rs.getString("location"),
+                        rs.getString("instagramUrl"),
+                        rs.getString("twitterUrl"),
+                        rs.getString("facebookUrl"),
+                        rs.getString("linkedInUrl"),
+                        rs.getString("websiteUrl"),
+                        rs.getString("aboutMe"),
+                        rs.getString("profilePictureUrl"),
+                        rs.getBoolean("isPrivate"),
                         rs.getBoolean("mailVerified")
                 );
             }

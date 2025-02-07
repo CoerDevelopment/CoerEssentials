@@ -88,6 +88,8 @@ public class CoerSecurity {
             Jwts.parser().setSigningKey(SECRET_KEY).build().parseSignedClaims(token);
             return true;
         } catch (Exception ex) {
+
+            ex.printStackTrace();
             return false;
         }
     }
