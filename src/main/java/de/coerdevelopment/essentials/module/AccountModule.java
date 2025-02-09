@@ -4,6 +4,7 @@ import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.repository.AccountRepository;
 import de.coerdevelopment.essentials.security.CoerSecurity;
+import org.springframework.http.ResponseEntity;
 
 import java.sql.Date;
 
@@ -22,8 +23,8 @@ public class AccountModule extends Module {
     private long passwordResetCodeExpiration;
     private long tokenExpiration;
     private String passwortResetUrl;
-    private int maxLoginTriesInShortTime;
-    private int maxPasswordResetTriesInShortTime;
+    public int maxLoginTriesInShortTime;
+    public int maxPasswordResetTriesInShortTime;
 
     public AccountModule() {
         super(ModuleType.ACCOUNT);
@@ -104,19 +105,24 @@ public class AccountModule extends Module {
     /**
      * Generates a new verification code and sends it to the mail of the given account
      */
-    public void sendMailVerification(int accountId) {
+    public ResponseEntity sendMailVerification(int accountId) {
         if (!mailConfirmationEnabled) {
-            return;
+            return ResponseEntity.badRequest().body("Unable to verify mail.");
         }
         // check if the mail is already verified
         if (isMailVerified(accountId)) {
-            return;
+            return ResponseEntity.badRequest().body("Mail is already verified.");
         }
 
         // check if account exists and get mail
         String mail = accountRepository.getMail(accountId);
         if (mail == null) {
-            return;
+            return ResponseEntity.badRequest().body("Unable to verify mail.");
+        }
+
+        // check if verification is pending
+        if (accountRepository.isMailVerificationPending(accountId)) {
+            return ResponseEntity.badRequest().body("Verification code already send.");
         }
 
         // generate new verification code
@@ -128,28 +134,29 @@ public class AccountModule extends Module {
         String programName = CoerEssentials.getInstance().getProgramName();
         String text = "Your verification code is: " + code;
         mailModule.sendMail(mail, programName + " Verification Code", text);
+        return ResponseEntity.ok("Verification code send.");
     }
 
     /**
      * Uses the verification code send by the client to verify the mail of the given account
      */
-    public boolean verifyMail(int accountId, String verificationCode) {
+    public ResponseEntity verifyMail(int accountId, String verificationCode) {
         // check if the mail is already verified
         if (isMailVerified(accountId)) {
-            return true;
+            return ResponseEntity.ok("Mail is already verified.");
         }
         // check if the verification code is correct
         // if the code is expired, send a new one
         try {
             if (accountRepository.doesMailVerificationCodeMatch(accountId, verificationCode)) {
                 accountRepository.setMailVerified(accountId);
-                return true;
+                return ResponseEntity.ok().build();
             } else {
-                return false;
+                return ResponseEntity.badRequest().body("Invalid verification code.");
             }
         } catch (Exception e) {
             sendMailVerification(accountId);
-            return false;
+            return ResponseEntity.badRequest().body("Verification code expired. New code send.");
         }
     }
 
@@ -201,6 +208,10 @@ public class AccountModule extends Module {
 
     public boolean isAccountLocked(int accountId) {
         return accountRepository.isAccountLocked(accountId);
+    }
+
+    public boolean updateAccount(int accountId, Account account) {
+        return accountRepository.updateAccount(accountId, account);
     }
 
     /**
@@ -308,8 +319,10 @@ public class AccountModule extends Module {
     /**
      * Deletes the account
      */
-    public void deleteAccount(int accountId) {
-        accountRepository.deleteAccount(accountId);
+    public ResponseEntity deleteAccount(int accountId) {
+        return accountRepository.deleteAccount(accountId) ?
+                ResponseEntity.ok("Account have been deleted") :
+                ResponseEntity.badRequest().body("Unable to delete account");
     }
 
     /**

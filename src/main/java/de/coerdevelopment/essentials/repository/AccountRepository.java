@@ -175,6 +175,20 @@ public class AccountRepository extends Repository {
         return false;
     }
 
+    public boolean isMailVerificationPending(int accountId) {
+        try {
+            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT mailVerificationCodeExpiration FROM " + tableName + " WHERE accountId = ? AND mailVerified = false");
+            ps.setInt(1, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getLong("mailVerificationCodeExpiration") > System.currentTimeMillis();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return false;
+    }
+
     /**
      * Checks if the given credentials are correct and returns the accountId if they are
      * Otherwise an exception is thrown
@@ -212,7 +226,32 @@ public class AccountRepository extends Repository {
         }
     }
 
-    public void setProperty(int accountId, String property, Object value) {
+    public boolean updateAccount(int accountId, Account account) {
+        try {
+            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET " +
+                    "birthday = ?, firstName = ?, lastName = ?, username = ?, nationality = ?, location = ?, instagramUrl = ?, twitterUrl = ?, facebookUrl = ?, linkedInUrl = ?, websiteUrl = ?, aboutMe = ?, profilePictureUrl = ?, isPrivate = ? WHERE accountId = ?");
+            ps.setDate(1, account.birthday != null ? new Date(account.birthday.getTime()) : null);
+            ps.setString(2, account.firstName);
+            ps.setString(3, account.lastName);
+            ps.setString(4, account.username);
+            ps.setString(5, account.nationality);
+            ps.setString(6, account.location);
+            ps.setString(7, account.instagramUrl);
+            ps.setString(8, account.twitterUrl);
+            ps.setString(9, account.facebookUrl);
+            ps.setString(10, account.linkedinUrl);
+            ps.setString(11, account.websiteUrl);
+            ps.setString(12, account.aboutMe);
+            ps.setString(13, account.profilePictureUrl);
+            ps.setBoolean(14, account.isPrivate);
+            ps.setInt(15, accountId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+        public void setProperty(int accountId, String property, Object value) {
         try {
             PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET " + property + " = ? WHERE accountId = ?");
             ps.setObject(1, value);
@@ -270,14 +309,15 @@ public class AccountRepository extends Repository {
         return null;
     }
 
-    public void deleteAccount(int accountId) {
+    public boolean deleteAccount(int accountId) {
         try {
             PreparedStatement ps = sql.getConnection().prepareStatement("DELETE FROM " + tableName + " WHERE accountId = ?");
             ps.setInt(1, accountId);
-            ps.executeUpdate();
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return false;
     }
 
 }
