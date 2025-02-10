@@ -8,7 +8,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class Main {
+public class CoerEssentialsTester {
 
     public static void main(String[] args) {
         SQLModule sqlModule = (SQLModule) CoerEssentials.getInstance().enableModule(ModuleType.SQL);
@@ -16,7 +16,7 @@ public class Main {
         MailModule mailModule = (MailModule) CoerEssentials.getInstance().enableModule(ModuleType.MAIL);
         AccountModule accountModule = (AccountModule) CoerEssentials.getInstance().enableModule(ModuleType.ACCOUNT);
 
-        SpringApplication app = new SpringApplication(Main.class);
+        SpringApplication app = new SpringApplication(CoerEssentialsTester.class);
         app.run(args);
     }
 

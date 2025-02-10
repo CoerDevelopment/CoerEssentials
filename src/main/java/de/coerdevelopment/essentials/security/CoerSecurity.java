@@ -7,10 +7,13 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.spec.KeySpec;
 import java.util.Base64;
 import java.util.Date;
 
@@ -20,7 +23,7 @@ public class CoerSecurity {
     
     public static CoerSecurity getInstance() {
         if (instance == null) {
-            new CoerSecurity("SHA-256", 16, TimeUtils.getInstance().getMillisecondsFromDays(1));
+            new CoerSecurity("SHA-256", 64, TimeUtils.getInstance().getMillisecondsFromDays(1));
         }
         return instance;
     }
@@ -30,11 +33,19 @@ public class CoerSecurity {
         return instance;
     }
 
+    // Hash settings
     private final String ALGORITHM;
     private final int SALT_LENGTH;
+
+    // Token settings
     private final long TOKEN_EXPIRATION;
     private final SignatureAlgorithm SIGNATURE_ALGORITHM = SignatureAlgorithm.HS512;
     private final SecretKey SECRET_KEY = Keys.secretKeyFor(SIGNATURE_ALGORITHM);
+
+    // Password settings
+    private final int PASSWORD_ITERATIONS = 100000;
+    private final int PASSWORD_KEY_LENGTH = 256;
+    private final String PASSWORD_ALGORITHM = "PBKDF2WithHmacSHA256";
 
     public CoerSecurity(String algorithm, int saltLength, long tokenExpiration) {
         this.ALGORITHM = algorithm;
@@ -97,6 +108,18 @@ public class CoerSecurity {
         byte[] salt = new byte[SALT_LENGTH];
         random.nextBytes(salt);
         return Base64.getEncoder().encodeToString(salt).substring(0, SALT_LENGTH);
+    }
+
+    public String hashPassword(String password, String salt) {
+        try {
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(), PASSWORD_ITERATIONS, PASSWORD_KEY_LENGTH);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance(PASSWORD_ALGORITHM);
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
     }
 
     public synchronized String stringToHash(String input) {

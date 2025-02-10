@@ -59,7 +59,7 @@ public class AccountModule extends Module {
 
         // Generate salt and hash the password again
         String salt = CoerSecurity.getInstance().generateSalt();
-        String passwordHash = CoerSecurity.getInstance().stringToHash(password + salt);
+        String passwordHash = CoerSecurity.getInstance().hashPassword(password, salt);
 
         // create the account in database
         int accountId;
@@ -175,7 +175,8 @@ public class AccountModule extends Module {
 
         //send mail
         String programName = CoerEssentials.getInstance().getProgramName();
-        String url = passwortResetUrl.replace("%token%", token);
+        String url = passwortResetUrl.replace("%token%", "token=" + token);
+        System.out.println(url);
         String text = "Click the following link to reset your password: " + url;
         mailModule.sendMail(mail, programName + " Password Reset", text);
     }
@@ -185,7 +186,12 @@ public class AccountModule extends Module {
      */
     public boolean changePassword(String token, String newPassword) {
         // check if token is valid
-        String subject = CoerSecurity.getInstance().getStringFromToken(token);
+        String subject;
+        try {
+            subject = CoerSecurity.getInstance().getStringFromToken(token);
+        } catch (Exception e) {
+            return false;
+        }
         if (!subject.startsWith("passwordReset")) {
             return false;
         }
@@ -193,7 +199,7 @@ public class AccountModule extends Module {
 
         // generate new salt and hash the password
         String salt = CoerSecurity.getInstance().generateSalt();
-        String passwordHash = CoerSecurity.getInstance().stringToHash(newPassword + salt);
+        String passwordHash = CoerSecurity.getInstance().hashPassword(newPassword, salt);
         accountRepository.changePassword(accountId, passwordHash, salt);
         return true;
     }

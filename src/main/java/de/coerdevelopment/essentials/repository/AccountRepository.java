@@ -201,7 +201,7 @@ public class AccountRepository extends Repository {
             if (rs.next()) {
                 String dbPassword = rs.getString("password");
                 String dbSalt = rs.getString("salt");
-                String hashedPassword = CoerSecurity.getInstance().stringToHash(password + dbSalt);
+                String hashedPassword = CoerSecurity.getInstance().hashPassword(password, dbSalt);
                 if (dbPassword.equals(hashedPassword)) {
                     return rs.getInt("accountId");
                 } else {
