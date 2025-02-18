@@ -56,6 +56,10 @@ public class CoerEssentials {
         return programName;
     }
 
+    public void setConfigDirectory(String directory) {
+        this.configDirectory = directory;
+    }
+
     // Logging
 
     public void logInfo(String message) {

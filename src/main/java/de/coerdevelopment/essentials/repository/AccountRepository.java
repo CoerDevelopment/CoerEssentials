@@ -31,7 +31,7 @@ public class AccountRepository extends Repository {
     public void createTable() {
         try {
             PreparedStatement ps = sql.getConnection().prepareStatement("CREATE TABLE IF NOT EXISTS " + tableName + " (" +
-                    "accountId INT PRIMARY KEY AUTO_INCREMENT," +
+                    "accountId " + (sql.isMySQLDialect() ? "INT PRIMARY KEY AUTO_INCREMENT" : "SERIAL PRIMARY KEY") + "," +
                     "mail VARCHAR(128) NOT NULL UNIQUE," +
                     "password VARCHAR(64) NOT NULL," +
                     "salt VARCHAR(64) NOT NULL," +

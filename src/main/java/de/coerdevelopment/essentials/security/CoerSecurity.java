@@ -43,7 +43,7 @@ public class CoerSecurity {
     private final SecretKey SECRET_KEY = Keys.secretKeyFor(SIGNATURE_ALGORITHM);
 
     // Password settings
-    private final int PASSWORD_ITERATIONS = 100000;
+    private final int PASSWORD_ITERATIONS = 91826;
     private final int PASSWORD_KEY_LENGTH = 256;
     private final String PASSWORD_ALGORITHM = "PBKDF2WithHmacSHA256";
 
@@ -115,7 +115,7 @@ public class CoerSecurity {
             KeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(), PASSWORD_ITERATIONS, PASSWORD_KEY_LENGTH);
             SecretKeyFactory factory = SecretKeyFactory.getInstance(PASSWORD_ALGORITHM);
             byte[] hash = factory.generateSecret(spec).getEncoded();
-            return Base64.getEncoder().encodeToString(hash);
+                return Base64.getEncoder().encodeToString(hash);
         } catch (Exception ex) {
             ex.printStackTrace();
         }

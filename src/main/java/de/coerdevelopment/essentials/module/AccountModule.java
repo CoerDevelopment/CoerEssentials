@@ -176,7 +176,6 @@ public class AccountModule extends Module {
         //send mail
         String programName = CoerEssentials.getInstance().getProgramName();
         String url = passwortResetUrl.replace("%token%", "token=" + token);
-        System.out.println(url);
         String text = "Click the following link to reset your password: " + url;
         mailModule.sendMail(mail, programName + " Password Reset", text);
     }

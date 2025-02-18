@@ -139,7 +139,6 @@ public class AccountController {
     @CrossOrigin
     @PostMapping("/password/reset/{token}")
     public ResponseEntity resetPassword(@PathVariable("token") String token, @RequestBody String newPassword) {
-        System.out.println("Test");
         if (accountModule.changePassword(token, newPassword)) {
             return ResponseEntity.ok().build();
         } else {

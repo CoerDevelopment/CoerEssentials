@@ -105,13 +105,24 @@ public class SQL {
     }
 
     public String getDriver() {
-        if (type.toLowerCase().equals("mysql")) {
-            return "jdbc:mysql://";
-        } else if (type.toLowerCase().equals("mariadb")) {
-            return "jdbc:mariadb://";
-        } else {
-            throw new RuntimeException("Unsupported database type: " + type);
+        switch (type.toLowerCase()) {
+            case "mysql":
+                return "jdbc:mysql://";
+            case "mariadb":
+                return "jdbc:mariadb://";
+            case "postgresql":
+                return "jdbc:postgresql://";
+            default:
+                throw new RuntimeException("Unsupported database type: " + type);
         }
+    }
+
+    public boolean isMySQLDialect() {
+        return type.equalsIgnoreCase("mysql") || type.equalsIgnoreCase("mariadb");
+    }
+
+    public boolean isPostgreSQLDialect() {
+        return type.equalsIgnoreCase("postgresql");
     }
 
 }
