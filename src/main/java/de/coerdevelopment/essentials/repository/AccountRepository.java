@@ -8,20 +8,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/**
- * Table structure:
- *
- * accountId INT PK
- * mail VARCHAR(128) NN UQ
- * password VARCHAR(64) NN
- * salt VARCHAR(64) NN
- * firstName VARCHAR(64)
- * lastName VARCHAR(64)
- * username VARCHAR(32)
- * mailVerified BOOLEAN NN
- * mailVerificationCode VARCHAR(64)
- * mailVerificationCodeExpiration BIGINT
- */
 public class AccountRepository extends Repository {
     public AccountRepository(String tableName) {
         super(tableName);
@@ -29,32 +15,32 @@ public class AccountRepository extends Repository {
 
     @Override
     public void createTable() {
+        SQLTable table = new SQLTable(tableName);
+        table.addAutoKey("accountId");
+        table.addUniqueString("mail", 128, false);
+        table.addString("password", 64, false);
+        table.addString("salt", 64, false);
+        table.addDate("createdDate", false);
+        table.addBooleanWithDefault("isLocked", false);
+        table.addDate("birthday", true);
+        table.addString("firstName", 64, true);
+        table.addString("lastName", 64, true);
+        table.addString("username", 32, true);
+        table.addString("nationality", 64, true);
+        table.addString("location", 64, true);
+        table.addString("instagramUrl", 128, true);
+        table.addString("twitterUrl", 128, true);
+        table.addString("facebookUrl", 128, true);
+        table.addString("linkedInUrl", 128, true);
+        table.addString("websiteUrl", 128, true);
+        table.addString("aboutMe", 256, true);
+        table.addString("profilePictureUrl", 256, true);
+        table.addBooleanWithDefault("isPrivate", false);
+        table.addBooleanWithDefault("mailVerified", false);
+        table.addString("mailVerificationCode", 64, true);
+        table.addLong("mailVerificationCodeExpiration", true);
         try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("CREATE TABLE IF NOT EXISTS " + tableName + " (" +
-                    "accountId " + (sql.isMySQLDialect() ? "INT PRIMARY KEY AUTO_INCREMENT" : "SERIAL PRIMARY KEY") + "," +
-                    "mail VARCHAR(128) NOT NULL UNIQUE," +
-                    "password VARCHAR(64) NOT NULL," +
-                    "salt VARCHAR(64) NOT NULL," +
-                    "createdDate DATE NOT NULL," +
-                    "isLocked BOOLEAN NOT NULL DEFAULT FALSE," +
-                    "birthday DATE," +
-                    "firstName VARCHAR(64)," +
-                    "lastName VARCHAR(64)," +
-                    "username VARCHAR(32) UNIQUE," +
-                    "nationality VARCHAR(64)," +
-                    "location VARCHAR(64)," +
-                    "instagramUrl VARCHAR(128)," +
-                    "twitterUrl VARCHAR(128)," +
-                    "facebookUrl VARCHAR(128)," +
-                    "linkedInUrl VARCHAR(128)," +
-                    "websiteUrl VARCHAR(128)," +
-                    "aboutMe VARCHAR(256)," +
-                    "profilePictureUrl VARCHAR(256)," +
-                    "isPrivate BOOLEAN NOT NULL DEFAULT FALSE," +
-                    "mailVerified BOOLEAN NOT NULL DEFAULT false," +
-                    "mailVerificationCode VARCHAR(64)," +
-                    "mailVerificationCodeExpiration BIGINT" +
-                    ")");
+            PreparedStatement ps = sql.getConnection().prepareStatement(table.getCreateTableStatement(sql.getDialect()));
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);

@@ -22,14 +22,14 @@ public class SQL {
             instance.password = password;
             instance.database = database;
             instance.port = port;
-            instance.type = type;
+            instance.dialect = SQLDialect.valueOf(type.toUpperCase());
         } else {
             instance = new SQL(host, username, password, database, port, type);
         }
         return instance;
     }
 
-    private String type;
+    private SQLDialect dialect;
     private String host;
     private String username;
     private String password;
@@ -44,7 +44,7 @@ public class SQL {
         this.password = password;
         this.database = database;
         this.port = port;
-        this.type = type;
+        this.dialect = SQLDialect.valueOf(type.toUpperCase());
     }
 
     public void connect() throws SQLException, ClassNotFoundException {
@@ -105,24 +105,18 @@ public class SQL {
     }
 
     public String getDriver() {
-        switch (type.toLowerCase()) {
-            case "mysql":
-                return "jdbc:mysql://";
-            case "mariadb":
-                return "jdbc:mariadb://";
-            case "postgresql":
-                return "jdbc:postgresql://";
-            default:
-                throw new RuntimeException("Unsupported database type: " + type);
-        }
+        return dialect.driverUrl;
     }
 
     public boolean isMySQLDialect() {
-        return type.equalsIgnoreCase("mysql") || type.equalsIgnoreCase("mariadb");
+        return dialect.equals(SQLDialect.MYSQL) || dialect.equals(SQLDialect.MARIADB);
     }
 
     public boolean isPostgreSQLDialect() {
-        return type.equalsIgnoreCase("postgresql");
+        return dialect.equals(SQLDialect.POSTGRESQL);
     }
 
+    public SQLDialect getDialect() {
+        return dialect;
+    }
 }
