@@ -67,6 +67,7 @@ public class SQL {
         config.setPassword(password);
         config.setMinimumIdle(minPoolSize);
         config.setMaximumPoolSize(maxPoolSize);
+        config.setLeakDetectionThreshold(30000);
 
         this.dataSource = new HikariDataSource(config);
     }
@@ -95,8 +96,8 @@ public class SQL {
     }
 
     public int countDatabaseTables() {
-        try {
-            PreparedStatement ps = getConnection().prepareStatement("SELECT COUNT(*) AS tables " +
+        try (Connection connection = getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT COUNT(*) AS tables " +
                     "FROM information_schema.tables " +
                     "WHERE table_schema = ?");
             ps.setString(1, database);

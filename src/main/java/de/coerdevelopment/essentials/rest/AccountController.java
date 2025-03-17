@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/account")
@@ -44,7 +46,25 @@ public class AccountController {
         }
     }
 
-    @GetMapping("/login")
+    @AuthentificationRequired
+    @GetMapping()
+    public ResponseEntity<Account> getAccount(@RequestAttribute("accountId") int accountId) {
+        return ResponseEntity.ok(accountModule.getAccount(accountId));
+    }
+
+    @AuthentificationRequired
+    @PutMapping()
+    public ResponseEntity<Boolean> updateAccount(@RequestAttribute("accountId") int accountId, @RequestBody Account account) {
+        return ResponseEntity.ok(accountModule.updateAccount(accountId, account));
+    }
+
+    @AuthentificationRequired
+    @DeleteMapping()
+    public ResponseEntity deleteAccount(@RequestAttribute("accountId") int accountId) {
+        return accountModule.deleteAccount(accountId);
+    }
+
+    @PostMapping("/security/login")
     public ResponseEntity<String> login(@RequestBody AccountCredentialsRequest request) {
         if (accountLoginLocks.containsKey(request.mail)) {
             if (accountLoginLocks.get(request.mail).isAfter(LocalDateTime.now())) {
@@ -80,38 +100,7 @@ public class AccountController {
         }
     }
 
-    @AuthentificationRequired
-    @GetMapping()
-    public ResponseEntity<Account> getAccount(@RequestAttribute("accountId") int accountId) {
-        return ResponseEntity.ok(accountModule.getAccount(accountId));
-    }
-
-    @AuthentificationRequired
-    @PostMapping("/update")
-    public ResponseEntity<Boolean> updateAccount(@RequestAttribute("accountId") int accountId, @RequestBody Account account) {
-        return ResponseEntity.ok(accountModule.updateAccount(accountId, account));
-    }
-
-    @AuthentificationRequired
-    @DeleteMapping()
-    public ResponseEntity deleteAccount(@RequestAttribute("accountId") int accountId) {
-        return accountModule.deleteAccount(accountId);
-    }
-
-    @AuthentificationRequired
-    @PostMapping("/mail/requestverification")
-    public ResponseEntity requestMailVerification(@RequestAttribute("accountId") int accountId) {
-        return accountModule.sendMailVerification(accountId);
-    }
-
-    @AuthentificationRequired
-    @PostMapping("/mail/verify/{verificationCode}")
-    public ResponseEntity verifyMail(@RequestAttribute("accountId") int accountId, @PathVariable("verificationCode") String verificationCode) {
-        return accountModule.verifyMail(accountId, verificationCode);
-
-    }
-
-    @PostMapping("/password/requestreset/{mail}")
+    @PostMapping("/security/requestpasswordreset/{mail}")
     public void requestPasswordReset(@PathVariable("mail") String mail) {
         if (passwordResetLocks.containsKey(mail)) {
             if (passwordResetLocks.get(mail).isAfter(LocalDateTime.now())) {
@@ -137,13 +126,25 @@ public class AccountController {
     }
 
     @CrossOrigin
-    @PostMapping("/password/reset/{token}")
+    @PutMapping("/security/resetpassword/{token}")
     public ResponseEntity resetPassword(@PathVariable("token") String token, @RequestBody String newPassword) {
         if (accountModule.changePassword(token, newPassword)) {
             return ResponseEntity.ok().build();
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid token");
         }
+    }
+
+    @AuthentificationRequired
+    @PostMapping("/mail/requestverification")
+    public ResponseEntity requestMailVerification(@RequestAttribute("accountId") int accountId) {
+        return accountModule.sendMailVerification(accountId);
+    }
+
+    @AuthentificationRequired
+    @PutMapping("/mail/verify/{verificationCode}")
+    public ResponseEntity verifyMail(@RequestAttribute("accountId") int accountId, @PathVariable("verificationCode") String verificationCode) {
+        return accountModule.verifyMail(accountId, verificationCode);
     }
 
     public static class AccountCredentialsRequest {

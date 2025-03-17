@@ -79,6 +79,10 @@ public class SQLTable {
         addEntity(name, "DATE", nullable);
     }
 
+    public void addDateTime(String name, boolean nullable) {
+        addEntity(name, "TIMESTAMP", nullable);
+    }
+
     public void addDouble(String name, int length, int digits, boolean nullable) {
         addEntity(name, "DECIMAL(" + length + "," + digits + ")", nullable);
     }

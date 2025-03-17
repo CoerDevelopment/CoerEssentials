@@ -3,10 +3,7 @@ package de.coerdevelopment.essentials.repository;
 import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class AccountRepository extends Repository {
     public AccountRepository(String tableName) {
@@ -20,7 +17,7 @@ public class AccountRepository extends Repository {
         table.addUniqueString("mail", 128, false);
         table.addString("password", 64, false);
         table.addString("salt", 64, false);
-        table.addDate("createdDate", false);
+        table.addDateTime("createdDate", false);
         table.addBooleanWithDefault("isLocked", false);
         table.addDate("birthday", true);
         table.addString("firstName", 64, true);
@@ -39,8 +36,8 @@ public class AccountRepository extends Repository {
         table.addBooleanWithDefault("mailVerified", false);
         table.addString("mailVerificationCode", 64, true);
         table.addLong("mailVerificationCodeExpiration", true);
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement(table.getCreateTableStatement(sql.getDialect()));
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement(table.getCreateTableStatement(sql.getDialect()));
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -48,12 +45,12 @@ public class AccountRepository extends Repository {
     }
 
     public int insertAccount(String mail, String password, String salt) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("INSERT INTO " + tableName + " (mail, password, salt, createdDate) VALUES (?, ?, ?, ?)", PreparedStatement.RETURN_GENERATED_KEYS);
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("INSERT INTO " + tableName + " (mail, password, salt, createdDate) VALUES (?, ?, ?, ?)", PreparedStatement.RETURN_GENERATED_KEYS);
             ps.setString(1, mail);
             ps.setString(2, password);
             ps.setString(3, salt);
-            ps.setDate(4, new java.sql.Date(System.currentTimeMillis()));
+            ps.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
             ps.execute();
             ResultSet rs = ps.getGeneratedKeys();
             if (rs.next()) {
@@ -66,8 +63,8 @@ public class AccountRepository extends Repository {
     }
 
     public int getAccountIdByMail(String mail) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT accountId FROM " + tableName + " WHERE mail = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT accountId FROM " + tableName + " WHERE mail = ?");
             ps.setString(1, mail);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -80,8 +77,8 @@ public class AccountRepository extends Repository {
     }
 
     public boolean doesMailExists(String mail) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT accountId FROM " + tableName + " WHERE mail = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT accountId FROM " + tableName + " WHERE mail = ?");
             ps.setString(1, mail);
             ResultSet rs = ps.executeQuery();
             return rs.next();
@@ -92,8 +89,8 @@ public class AccountRepository extends Repository {
     }
 
     public String getMail(int accountId) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT mail FROM " + tableName + " WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT mail FROM " + tableName + " WHERE accountId = ?");
             ps.setInt(1, accountId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -106,8 +103,8 @@ public class AccountRepository extends Repository {
     }
 
     public boolean isMailVerified(int accountId) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT mailVerified FROM " + tableName + " WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT mailVerified FROM " + tableName + " WHERE accountId = ?");
             ps.setInt(1, accountId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -120,8 +117,8 @@ public class AccountRepository extends Repository {
     }
 
     public void setMailVerified(int accountId) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET mailVerified = ?, mailVerificationCode = null, mailVerificationCodeExpiration = null  WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("UPDATE " + tableName + " SET mailVerified = ?, mailVerificationCode = null, mailVerificationCodeExpiration = null  WHERE accountId = ?");
             ps.setBoolean(1, true);
             ps.setInt(2, accountId);
             ps.executeUpdate();
@@ -131,8 +128,8 @@ public class AccountRepository extends Repository {
     }
 
     public void setMailVerificationCode(int accountId, String mailVerificationCode, long mailVerificationCodeExpiration) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET mailVerificationCode = ?, mailVerificationCodeExpiration = ? WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("UPDATE " + tableName + " SET mailVerificationCode = ?, mailVerificationCodeExpiration = ? WHERE accountId = ?");
             ps.setString(1, mailVerificationCode);
             ps.setLong(2, mailVerificationCodeExpiration);
             ps.setInt(3, accountId);
@@ -143,8 +140,8 @@ public class AccountRepository extends Repository {
     }
 
     public boolean doesMailVerificationCodeMatch(int accountId, String mailVerificationCode) throws Exception {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT mailVerificationCode, mailVerificationCodeExpiration FROM " + tableName + " WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT mailVerificationCode, mailVerificationCodeExpiration FROM " + tableName + " WHERE accountId = ?");
             ps.setInt(1, accountId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -162,8 +159,8 @@ public class AccountRepository extends Repository {
     }
 
     public boolean isMailVerificationPending(int accountId) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT mailVerificationCodeExpiration FROM " + tableName + " WHERE accountId = ? AND mailVerified = false");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT mailVerificationCodeExpiration FROM " + tableName + " WHERE accountId = ? AND mailVerified = false");
             ps.setInt(1, accountId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -180,8 +177,8 @@ public class AccountRepository extends Repository {
      * Otherwise an exception is thrown
      */
     public int getAccountIdIfPasswortMatches(String mail, String password) throws Exception {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT accountId, password, salt FROM " + tableName + " WHERE mail = ? AND isLocked = false");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT accountId, password, salt FROM " + tableName + " WHERE mail = ? AND isLocked = false");
             ps.setString(1, mail);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -201,8 +198,8 @@ public class AccountRepository extends Repository {
     }
 
     public void changePassword(int accountId, String password, String salt) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET password = ?, salt = ? WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("UPDATE " + tableName + " SET password = ?, salt = ? WHERE accountId = ?");
             ps.setString(1, password);
             ps.setString(2, salt);
             ps.setInt(3, accountId);
@@ -213,8 +210,8 @@ public class AccountRepository extends Repository {
     }
 
     public boolean updateAccount(int accountId, Account account) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET " +
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("UPDATE " + tableName + " SET " +
                     "birthday = ?, firstName = ?, lastName = ?, username = ?, nationality = ?, location = ?, instagramUrl = ?, twitterUrl = ?, facebookUrl = ?, linkedInUrl = ?, websiteUrl = ?, aboutMe = ?, profilePictureUrl = ?, isPrivate = ? WHERE accountId = ?");
             ps.setDate(1, account.birthday != null ? new Date(account.birthday.getTime()) : null);
             ps.setString(2, account.firstName);
@@ -237,9 +234,9 @@ public class AccountRepository extends Repository {
         }
     }
 
-        public void setProperty(int accountId, String property, Object value) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("UPDATE " + tableName + " SET " + property + " = ? WHERE accountId = ?");
+    public void setProperty(int accountId, String property, Object value) {
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("UPDATE " + tableName + " SET " + property + " = ? WHERE accountId = ?");
             ps.setObject(1, value);
             ps.setInt(2, accountId);
             ps.executeUpdate();
@@ -249,8 +246,8 @@ public class AccountRepository extends Repository {
     }
 
     public boolean isAccountLocked(int accountId) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT isLocked FROM " + tableName + " WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT isLocked FROM " + tableName + " WHERE accountId = ?");
             ps.setInt(1, accountId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -263,8 +260,8 @@ public class AccountRepository extends Repository {
     }
 
     public Account getAccount(int accountId) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("SELECT * FROM " + tableName + " WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("SELECT * FROM " + tableName + " WHERE accountId = ?");
             ps.setInt(1, accountId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -296,8 +293,8 @@ public class AccountRepository extends Repository {
     }
 
     public boolean deleteAccount(int accountId) {
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement("DELETE FROM " + tableName + " WHERE accountId = ?");
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement ps = connection.prepareStatement("DELETE FROM " + tableName + " WHERE accountId = ?");
             ps.setInt(1, accountId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {

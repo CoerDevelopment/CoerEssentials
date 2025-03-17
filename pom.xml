@@ -6,7 +6,7 @@
 
     <groupId>de.coerdevelopment</groupId>
     <artifactId>coer-essentials</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
 
     <distributionManagement>
         <repository>
@@ -93,6 +93,12 @@
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>6.2.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
