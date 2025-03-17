@@ -1,6 +1,12 @@
 package de.coerdevelopment.essentials.repository;
 
-import java.sql.*;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class SQL {
 
@@ -10,7 +16,7 @@ public class SQL {
         return instance;
     }
 
-    public static SQL newSQL(String host, String username, String password, String database, int port, String type) {
+    public static SQL newSQL(String host, String username, String password, String database, int port, String type, int minPoolSize, int maxPoolSize) {
         if (instance != null) { // close old connection and use new connection
             try {
                 instance.disconnect();
@@ -24,7 +30,7 @@ public class SQL {
             instance.port = port;
             instance.dialect = SQLDialect.valueOf(type.toUpperCase());
         } else {
-            instance = new SQL(host, username, password, database, port, type);
+            instance = new SQL(host, username, password, database, port, type, minPoolSize, maxPoolSize);
         }
         return instance;
     }
@@ -35,28 +41,39 @@ public class SQL {
     private String password;
     private String database;
     private int port;
+    private int minPoolSize;
+    private int maxPoolSize;
 
-    private Connection connection;
+    private HikariDataSource dataSource;
 
-    private SQL(String host, String username, String password, String database, int port, String type) {
+    private SQL(String host, String username, String password, String database, int port, String type, int minPoolSize, int maxPoolSize) {
         this.host = host;
         this.username = username;
         this.password = password;
         this.database = database;
         this.port = port;
         this.dialect = SQLDialect.valueOf(type.toUpperCase());
+        this.minPoolSize = minPoolSize;
+        this.maxPoolSize = maxPoolSize;
     }
 
     public void connect() throws SQLException, ClassNotFoundException {
-        if (isConnected()) {
+        if (isPoolConnected()) {
             return;
         }
-        connection = DriverManager.getConnection(getDriver() + host + ":" + port + "/" + database + "?useUnicode=true&autoReconnect=true", username, password);
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(getURL());
+        config.setUsername(username);
+        config.setPassword(password);
+        config.setMinimumIdle(minPoolSize);
+        config.setMaximumPoolSize(maxPoolSize);
+
+        this.dataSource = new HikariDataSource(config);
     }
 
     public void disconnect() throws SQLException {
-        if (isConnected()) {
-            connection.close();
+        if (isPoolConnected()) {
+            dataSource.close();
         }
     }
 
@@ -66,22 +83,15 @@ public class SQL {
     public boolean initSQL() {
         try {
             connect();
-            return isConnected();
+            return isPoolConnected();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
         }
         return false;
     }
 
-    public boolean isConnected() {
-        if (connection != null) {
-            try {
-                return !connection.isClosed();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        return false;
+    public boolean isPoolConnected() {
+        return dataSource != null && !dataSource.isClosed();
     }
 
     public int countDatabaseTables() {
@@ -100,12 +110,16 @@ public class SQL {
         return -1;
     }
 
-    public synchronized Connection getConnection() {
-        return connection;
+    public synchronized Connection getConnection() throws SQLException {
+        return dataSource.getConnection();
     }
 
     public String getDriver() {
         return dialect.driverUrl;
+    }
+
+    public String getURL() {
+        return getDriver() + host + ":" + port + "/" + database;
     }
 
     public boolean isMySQLDialect() {

@@ -6,7 +6,7 @@
 
     <groupId>de.coerdevelopment</groupId>
     <artifactId>coer-essentials</artifactId>
-    <version>1.2</version>
+    <version>1.2.2</version>
 
     <distributionManagement>
         <repository>
@@ -88,6 +88,11 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>6.2.1</version>
         </dependency>
     </dependencies>
 

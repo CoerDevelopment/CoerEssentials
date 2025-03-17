@@ -1,10 +1,7 @@
 package de.coerdevelopment.essentials.module;
 
 import de.coerdevelopment.essentials.CoerEssentials;
-import de.coerdevelopment.essentials.repository.Repository;
 import de.coerdevelopment.essentials.repository.SQL;
-
-import java.util.*;
 
 public class SQLModule extends Module {
 
@@ -23,12 +20,14 @@ public class SQLModule extends Module {
         String database = getStringOption("database");
         int port = getIntOption("port");
         String type = getStringOption("type");
-        SQL sql = SQL.newSQL(host, username, password, database, port, type);
+        int minPoolSize = getIntOption("minPoolSize");
+        int maxPoolSize = getIntOption("maxPoolSize");
+        SQL sql = SQL.newSQL(host, username, password, database, port, type, minPoolSize, maxPoolSize);
         try {
             sql.connect();
             Runtime.getRuntime().addShutdownHook(disconnectOnShutdownThread());
             CoerEssentials.getInstance().logInfo("Successfully established connection to SQL database.");
-            return sql.isConnected();
+            return sql.isPoolConnected();
         } catch (Exception e) {
             CoerEssentials.getInstance().logError("Error establishing connection to SQL database.");
             CoerEssentials.getInstance().logError("Check the login data in the config file: " + moduleConfig.getFilePath());

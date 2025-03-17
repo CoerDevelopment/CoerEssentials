@@ -12,7 +12,9 @@ public enum ModuleType {
             "password", "password",
             "database", "database",
             "port", 3306,
-            "type", "mysql"
+            "type", "mysql",
+            "minPoolSize", 2,
+            "maxPoolSize", 8
     ), List.of()),
     MAIL("Mail", Map.of(
             "host", "host",
