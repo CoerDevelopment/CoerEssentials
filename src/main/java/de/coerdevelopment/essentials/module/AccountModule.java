@@ -7,11 +7,17 @@ import de.coerdevelopment.essentials.security.CoerSecurity;
 import org.springframework.http.ResponseEntity;
 
 import java.sql.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class AccountModule extends Module {
 
     private AccountRepository accountRepository;
     private MailModule mailModule;
+    private Map<Integer, Integer> restUsagePerAccountInShortTime;
 
     // Options
     private String tableName;
@@ -25,6 +31,9 @@ public class AccountModule extends Module {
     private String passwortResetUrl;
     public int maxLoginTriesInShortTime;
     public int maxPasswordResetTriesInShortTime;
+    private boolean spamProtectionEnabled;
+    private long spamProtectionTimeFrameMilliseconds;
+    private int spamProtectionMaxRequests;
 
     public AccountModule() {
         super(ModuleType.ACCOUNT);
@@ -39,12 +48,16 @@ public class AccountModule extends Module {
         this.maxLoginTriesInShortTime = getIntOption("maxLoginTriesInShortTime");
         this.maxPasswordResetTriesInShortTime = getIntOption("maxPasswordResetTriesInShortTime");
         this.passwortResetUrl = getStringOption("resetPasswordUrl");
+        this.spamProtectionEnabled = getBooleanOption("spamProtectionEnabled");
+        this.spamProtectionTimeFrameMilliseconds = getLongOption("spamProtectionTimeFrameMilliseconds");
+        this.spamProtectionMaxRequests = getIntOption("spamProtectionMaxRequests");
 
         this.accountRepository = new AccountRepository(tableName);
-        SQLModule sqlModule = (SQLModule) Module.getModule(ModuleType.SQL);
-        accountRepository.createTable(); // create the account table if it does not exist®
+        SQLModule sqlModule = CoerEssentials.getInstance().getSQLModule();
+        accountRepository.createTable(); // create the account table if it does not exist
         CoerSecurity.newInstance(hashAlgorithm, saltLength, tokenExpiration);
-        this.mailModule = (MailModule) Module.getModule(ModuleType.MAIL);
+        this.mailModule = CoerEssentials.getInstance().getMailModule();
+        this.restUsagePerAccountInShortTime = new HashMap<>();
     }
 
     /**
@@ -201,6 +214,28 @@ public class AccountModule extends Module {
         String passwordHash = CoerSecurity.getInstance().hashPassword(newPassword, salt);
         accountRepository.changePassword(accountId, passwordHash, salt);
         return true;
+    }
+
+    /**
+     * Checks if the account is spam protected
+     * If the account is spam protected, the requests will not be processed
+     */
+    public boolean isAccountSpamProtected(int accountId) {
+        if (!spamProtectionEnabled) {
+            return false;
+        }
+        int requests = restUsagePerAccountInShortTime.getOrDefault(accountId, 0);
+        if (requests >= spamProtectionMaxRequests) {
+            return true;
+        } else {
+            restUsagePerAccountInShortTime.put(accountId, requests + 1);
+            ScheduledExecutorService lockScheduler = Executors.newScheduledThreadPool(1);
+            lockScheduler.schedule(() -> {
+                int currentRequests = restUsagePerAccountInShortTime.getOrDefault(accountId, 0);
+                restUsagePerAccountInShortTime.put(accountId, Math.max(0, currentRequests - 1));
+            }, spamProtectionTimeFrameMilliseconds, TimeUnit.MILLISECONDS);
+            return false;
+        }
     }
 
     public void lockAccount(int accountId) {

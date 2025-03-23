@@ -1,10 +1,7 @@
 package de.coerdevelopment.essentials;
 
-import de.coerdevelopment.essentials.module.AccountModule;
-import de.coerdevelopment.essentials.module.MailModule;
+import de.coerdevelopment.essentials.module.*;
 import de.coerdevelopment.essentials.module.Module;
-import de.coerdevelopment.essentials.module.ModuleType;
-import de.coerdevelopment.essentials.module.SQLModule;
 
 public class CoerEssentials {
 
@@ -51,6 +48,28 @@ public class CoerEssentials {
         }
         return null;
     }
+
+    /**
+     * Get the account module if it is enabled
+     */
+    public AccountModule getAccountModule() {
+        return (AccountModule) getModule(ModuleType.ACCOUNT);
+    }
+
+    /**
+     * Get the mail module if it is enabled
+     */
+    public MailModule getMailModule() {
+        return (MailModule) getModule(ModuleType.MAIL);
+    }
+
+    /**
+     * Get the SQL module if it is enabled
+     */
+    public SQLModule getSQLModule() {
+        return (SQLModule) getModule(ModuleType.SQL);
+    }
+
 
     public String getProgramName() {
         return programName;

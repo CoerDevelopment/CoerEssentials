@@ -1,13 +1,14 @@
 package de.coerdevelopment.essentials.rest;
 
+import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.http.HttpStatus;
 
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
@@ -32,7 +33,12 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         try {
             int accountId = CoerSecurity.getInstance().getIntFromToken(token);
             if (accountId <= 0) {
-                throw new Exception();
+                response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid or expired token");
+                return false;
+            }
+            if (CoerEssentials.getInstance().getAccountModule().isAccountSpamProtected(accountId)) {
+                response.sendError(HttpStatus.TOO_MANY_REQUESTS.value(), "Too many requests. Please try again later.");
+                return false;
             }
             request.setAttribute("accountId", accountId);
             return true;

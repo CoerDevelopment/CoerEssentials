@@ -48,6 +48,9 @@ public enum ModuleType {
         options.put("maxLoginTriesInShortTime", 10);
         options.put("maxPasswordResetTriesInShortTime", 3);
         options.put("resetPasswordUrl", "https://sample.com/resetPassword?%token%");
+        options.put("spamProtectionEnabled", true);
+        options.put("spamProtectionTimeFrameMilliseconds", 1000*60);
+        options.put("spamProtectionMaxRequests", 30);
         return options;
     }
 }
