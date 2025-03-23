@@ -12,7 +12,7 @@
         <repository>
             <id>github-coeressentials</id>
             <name>GitHub pongy20 Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/pongy20/CoerEssentials</url>
+            <url>https://maven.pkg.github.com/CoerDevelopment/CoerEssentials</url>
         </repository>
     </distributionManagement>
 
