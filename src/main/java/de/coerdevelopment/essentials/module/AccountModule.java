@@ -2,12 +2,17 @@ package de.coerdevelopment.essentials.module;
 
 import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.api.Account;
+import de.coerdevelopment.essentials.api.AccountLogin;
+import de.coerdevelopment.essentials.repository.AccountLoginRepository;
 import de.coerdevelopment.essentials.repository.AccountRepository;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 import org.springframework.http.ResponseEntity;
 
 import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,8 +21,10 @@ import java.util.concurrent.TimeUnit;
 public class AccountModule extends Module {
 
     private AccountRepository accountRepository;
+    private AccountLoginRepository accountLoginRepository;
     private MailModule mailModule;
     private Map<Integer, Integer> restUsagePerAccountInShortTime;
+    private List<AccountLogin> accountLoginsToBeProcessed;
 
     // Options
     private String tableName;
@@ -34,6 +41,7 @@ public class AccountModule extends Module {
     private boolean spamProtectionEnabled;
     private long spamProtectionTimeFrameMilliseconds;
     private int spamProtectionMaxRequests;
+    private int accountLoggingInsertionIntervalMilliseconds;
 
     public AccountModule() {
         super(ModuleType.ACCOUNT);
@@ -51,13 +59,19 @@ public class AccountModule extends Module {
         this.spamProtectionEnabled = getBooleanOption("spamProtectionEnabled");
         this.spamProtectionTimeFrameMilliseconds = getLongOption("spamProtectionTimeFrameMilliseconds");
         this.spamProtectionMaxRequests = getIntOption("spamProtectionMaxRequests");
+        this.accountLoggingInsertionIntervalMilliseconds = getIntOption("accountLoggingInsertionIntervalMilliseconds");
 
         this.accountRepository = new AccountRepository(tableName);
+        this.accountLoginRepository = AccountLoginRepository.getInstance();
         SQLModule sqlModule = CoerEssentials.getInstance().getSQLModule();
         accountRepository.createTable(); // create the account table if it does not exist
+        accountLoginRepository.createTable();
         CoerSecurity.newInstance(hashAlgorithm, saltLength, tokenExpiration);
         this.mailModule = CoerEssentials.getInstance().getMailModule();
         this.restUsagePerAccountInShortTime = new HashMap<>();
+        this.accountLoginsToBeProcessed = new ArrayList<>();
+
+        startAccountLogging();
     }
 
     /**
@@ -94,11 +108,14 @@ public class AccountModule extends Module {
      * Checks the provided credentials and returns the account id if they are correct
      */
     public int login(String mail, String passwordHash) {
+        int accountId = -1;
         try {
-            return accountRepository.getAccountIdIfPasswortMatches(mail, passwordHash);
+            accountId = accountRepository.getAccountIdIfPasswortMatches(mail, passwordHash);
+            accountLoginsToBeProcessed.add(new AccountLogin(mail, new Timestamp(System.currentTimeMillis()), accountId != -1, ""));
         } catch (Exception e) {
-            return -1;
+            accountLoginsToBeProcessed.add(new AccountLogin(mail, new Timestamp(System.currentTimeMillis()), false, e.getMessage()));
         }
+        return accountId;
     }
 
     /**
@@ -252,6 +269,21 @@ public class AccountModule extends Module {
 
     public boolean updateAccount(int accountId, Account account) {
         return accountRepository.updateAccount(accountId, account);
+    }
+
+    private void startAccountLogging() {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(() -> {
+            if (accountLoginsToBeProcessed.isEmpty()) {
+                return;
+            }
+            List<AccountLogin> currentLoginsToBeProcessed = new ArrayList<>(accountLoginsToBeProcessed);
+            long start = System.currentTimeMillis();
+            accountLoginRepository.insertLogins(currentLoginsToBeProcessed);
+            long end = System.currentTimeMillis();
+            System.out.println("Inserted " + currentLoginsToBeProcessed.size() + " logins in " + (end - start) + "ms");
+            accountLoginsToBeProcessed.removeAll(currentLoginsToBeProcessed);
+        }, accountLoggingInsertionIntervalMilliseconds, accountLoggingInsertionIntervalMilliseconds, TimeUnit.MILLISECONDS);
     }
 
     /**

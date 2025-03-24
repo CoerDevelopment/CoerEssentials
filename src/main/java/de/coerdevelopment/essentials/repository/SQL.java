@@ -111,9 +111,50 @@ public class SQL {
         return -1;
     }
 
-    public synchronized Connection getConnection() throws SQLException {
+    public Connection getConnection() throws SQLException {
         return dataSource.getConnection();
     }
+
+
+    public PreparedStatement executeQuery(String query, Object... params) {
+        return executeQueryWithParameters(query, false, null, params);
+    }
+
+    public PreparedStatement executeQuery(String query, StatementCustomAction customAction, Object... params) {
+        return executeQueryWithParameters(query, false, customAction, params);
+    }
+
+    public PreparedStatement executeQueryReturningKeys(String query, Object... params) {
+        return executeQueryWithParameters(query, true, null, params);
+    }
+
+    public PreparedStatement executeQueryReturningKeys(String query,StatementCustomAction customAction, Object... params) {
+        return executeQueryWithParameters(query, true, customAction, params);
+    }
+
+    private PreparedStatement executeQueryWithParameters(String query, boolean returnGeneratedKeys, StatementCustomAction customAction, Object... params) {
+        PreparedStatement statement = null;
+        try (Connection connection = getConnection()) {
+            statement = connection.prepareStatement(query, returnGeneratedKeys ? PreparedStatement.RETURN_GENERATED_KEYS : PreparedStatement.NO_GENERATED_KEYS);
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    statement.setObject(i + 1, params[i]);
+                }
+            }
+            if (customAction != null) {
+                customAction.onBeforeExecute(statement);
+            }
+            statement.execute();
+            if (customAction != null) {
+                customAction.onAfterExecute(statement);
+            }
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+        return statement;
+    }
+
+
 
     public String getDriver() {
         return dialect.driverUrl;

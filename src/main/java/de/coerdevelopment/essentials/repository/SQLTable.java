@@ -23,6 +23,10 @@ public class SQLTable {
         return query;
     }
 
+    public String getCreateTableStatement() {
+        return getCreateTableStatement(SQL.getSQL().getDialect());
+    }
+
     public void addEntity(SQLEntity entity) {
         this.entities.add(entity);
     }
@@ -44,13 +48,18 @@ public class SQLTable {
         this.entities.add(entity);
     }
 
-    public void addForeignKey(String name, String foreignKeyTable, String foreignKeyColumn, boolean onDeleteCascade, boolean nullable) {
+    public SQLEntity addForeignKey(String name, String foreignKeyTable, String foreignKeyColumn, boolean onDeleteCascade, boolean nullable) {
         SQLEntity entity = new SQLEntity(name, "INT");
         if (!nullable) {
             entity.setNotNull();
         }
         entity.setForeignKey(foreignKeyTable, foreignKeyColumn, onDeleteCascade);
         this.entities.add(entity);
+        return entity;
+    }
+
+    public void addUniqueForeignKey(String name, String foreignKeyTable, String foreignKeyColumn, boolean onDeleteCascade, boolean nullable) {
+        addForeignKey(name, foreignKeyTable, foreignKeyColumn, onDeleteCascade, nullable).setUnique();
     }
 
     public void addInteger(String name, boolean nullable) {

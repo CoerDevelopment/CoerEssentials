@@ -1,9 +1,6 @@
 package de.coerdevelopment.essentials.repository;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,7 +51,8 @@ public abstract class Repository {
 
         Map<Integer, T> idObjectMap = new HashMap<>();
 
-        try (PreparedStatement pstmt = this.sql.getConnection().prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection connection = sql.getConnection()) {
+            PreparedStatement pstmt = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
             int count = 0;
 
             for (T obj : objects) {
