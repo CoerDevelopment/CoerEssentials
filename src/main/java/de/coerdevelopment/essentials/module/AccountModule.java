@@ -278,10 +278,7 @@ public class AccountModule extends Module {
                 return;
             }
             List<AccountLogin> currentLoginsToBeProcessed = new ArrayList<>(accountLoginsToBeProcessed);
-            long start = System.currentTimeMillis();
             accountLoginRepository.insertLogins(currentLoginsToBeProcessed);
-            long end = System.currentTimeMillis();
-            System.out.println("Inserted " + currentLoginsToBeProcessed.size() + " logins in " + (end - start) + "ms");
             accountLoginsToBeProcessed.removeAll(currentLoginsToBeProcessed);
         }, accountLoggingInsertionIntervalMilliseconds, accountLoggingInsertionIntervalMilliseconds, TimeUnit.MILLISECONDS);
     }

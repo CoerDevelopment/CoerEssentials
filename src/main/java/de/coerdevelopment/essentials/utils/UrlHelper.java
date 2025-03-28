@@ -15,12 +15,23 @@ public class UrlHelper {
         }
         return instance;
     }
+
+    private CacheManager cacheManager;
     
     private UrlHelper() {
-        // private constructor used to secure singleton
+        cacheManager = new CacheManager(1000*60);
     }
     
     public String getJsonFromUrl(String urlString) {
+        return (String) cacheManager.getObject(urlString, new CacheAction() {
+            @Override
+            public Object createObject() {
+                return readFromUrl(urlString);
+            }
+        });
+    }
+
+    private String readFromUrl(String urlString) {
         StringBuilder result = new StringBuilder();
         try {
             URL url = new URL(urlString);

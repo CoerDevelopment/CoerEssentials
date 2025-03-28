@@ -1,0 +1,76 @@
+package de.coerdevelopment.essentials.utils;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+public class CacheManager {
+
+    /**
+     * Time to live in milliseconds
+     */
+    private long ttl;
+    private Map<String, Object> cache;
+
+    public CacheManager(long ttl) {
+        this.ttl = ttl;
+        cache = new HashMap<>();
+    }
+
+    /**
+     * Get an object from the cache. If the object is not in the cache, create it with the CacheAction.
+     */
+    public Object getObject(String key, CacheAction action) {
+        Object object = cache.get(key);
+        if (object == null) {
+            object = action.createObject();
+            cacheObject(key, object);
+        }
+        return object;
+    }
+
+    /**
+     * Put an object into the cache
+     */
+    public void cacheObject(String key, Object value) {
+        cache.put(key, value);
+        // Remove the object after the time to live
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                cache.remove(key);
+            }
+        }, ttl, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Get an object from the cache
+     */
+    public Object getObject(String key) {
+        return cache.get(key);
+    }
+
+    /**
+     * Remove an object from the cache
+     */
+    public void removeCachedObject(String key) {
+        cache.remove(key);
+    }
+
+    /**
+     * Clear the cache
+     */
+    public void clearCache() {
+        cache.clear();
+    }
+
+    /**
+     * Get the cache
+     */
+    public Map<String, Object> getCache() {
+        return cache;
+    }
+}
