@@ -37,7 +37,7 @@ public class AccountLoginRepository extends Repository {
 
     public void insertLogins(List<AccountLogin> logins) {
         try {
-            batchInsert(logins,
+            sql.batchInsert(tableName, logins,
                     T -> Map.of("mail", T.mail, "timestamp", T.timestamp, "success", T.success, "failureReason", T.failureReason),
                     500);
         } catch (SQLException e) {

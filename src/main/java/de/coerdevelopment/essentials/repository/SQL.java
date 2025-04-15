@@ -3,10 +3,12 @@ package de.coerdevelopment.essentials.repository;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class SQL {
 
@@ -67,7 +69,7 @@ public class SQL {
         config.setPassword(password);
         config.setMinimumIdle(minPoolSize);
         config.setMaximumPoolSize(maxPoolSize);
-        config.setLeakDetectionThreshold(30000);
+        config.setLeakDetectionThreshold(120000);
 
         this.dataSource = new HikariDataSource(config);
     }
@@ -154,7 +156,79 @@ public class SQL {
         return statement;
     }
 
+    private <T> Map<Integer, T> genericBatchInsert(String tableName, List<T> objects, ColumnMapper<T> columnMapper, int batchSize, boolean storeKeys) throws SQLException {
+        if (objects.isEmpty()) {
+            throw new IllegalArgumentException("The Objects are empty.");
+        }
+        if (batchSize <= 0) {
+            throw new IllegalArgumentException("Batch size has to be greater than zero.");
+        }
 
+        Map<String, Object> firstMapping = columnMapper.mapColumns(objects.get(0));
+        List<String> columns = new ArrayList<>(firstMapping.keySet());
+        String columnNames = String.join(", ", columns);
+
+        Map<Integer, T> idObjectMap = new HashMap<>();
+
+        try (Connection connection = getConnection()) {
+            boolean initialAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            int total = objects.size();
+            for (int i = 0; i < total; i += batchSize) {
+                int end = Math.min(i + batchSize, total);
+                List<T> batch = objects.subList(i, end);
+
+                String placeholders = batch.stream()
+                        .map(o -> "(" + columns.stream().map(c -> "?").collect(Collectors.joining(", ")) + ")")
+                        .collect(Collectors.joining(", "));
+
+                String query = "INSERT INTO " + tableName + " (" + columnNames + ") VALUES " + placeholders;
+
+                try (PreparedStatement pstmt = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+                    int paramIndex = 1;
+                    for (T obj : batch) {
+                        Map<String, Object> values = columnMapper.mapColumns(obj);
+                        for (String column : columns) {
+                            pstmt.setObject(paramIndex++, values.get(column));
+                        }
+                    }
+
+                    pstmt.executeUpdate();
+
+                    if (storeKeys) {
+                        storeKeys(pstmt, batch, idObjectMap);
+                    }
+                }
+            }
+
+            connection.commit();
+            connection.setAutoCommit(initialAutoCommit);
+        }
+
+        return idObjectMap;
+    }
+
+    public <T> void batchInsert(String tableName, List<T> objects, ColumnMapper<T> columnMapper, int batchSize) throws SQLException {
+        genericBatchInsert(tableName, objects, columnMapper, batchSize, false);
+    }
+
+    public <T> Map<Integer, T> batchInsertReturningKeys(String tableName, List<T> objects, ColumnMapper<T> columnMapper, int batchSize) throws SQLException {
+        return genericBatchInsert(tableName, objects, columnMapper, batchSize, true);
+    }
+
+    private <T> void storeKeys(PreparedStatement pstmt, List<T> batch, Map<Integer, T> idObjectMap) throws SQLException {
+        try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+            int i = 0;
+            while (generatedKeys.next()) {
+                int generatedId = generatedKeys.getInt(1);
+                if (i >= batch.size()) {
+                    throw new SQLException("Generated more keys than objects in batch.");
+                }
+                idObjectMap.put(generatedId, batch.get(i++));
+            }
+        }
+    }
 
     public String getDriver() {
         return dialect.driverUrl;

@@ -1,11 +1,7 @@
 package de.coerdevelopment.essentials.repository;
 
-import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public abstract class Repository {
 
@@ -31,63 +27,6 @@ public abstract class Repository {
                 return;
             }
             e.printStackTrace();
-        }
-    }
-
-    protected <T> Map<Integer, T> batchInsert(List<T> objects, ColumnMapper<T> columnMapper, int batchSize) throws SQLException {
-        if (objects.isEmpty()) {
-            throw new IllegalArgumentException("The Objects are empty.");
-        }
-        if (batchSize <= 0) {
-            throw new IllegalArgumentException("Batch size has to be greater than zero.");
-        }
-
-        Map<String, Object> firstMapping = columnMapper.mapColumns(objects.get(0));
-        List<String> columns = firstMapping.keySet().stream().collect(Collectors.toList());
-        String columnNames = String.join(", ", columns);
-        String placeholders = columns.stream().map(col -> "?").collect(Collectors.joining(", "));
-
-        String query = "INSERT INTO " + tableName + " (" + columnNames + ") VALUES (" + placeholders + ")";
-
-        Map<Integer, T> idObjectMap = new HashMap<>();
-
-        try (Connection connection = sql.getConnection()) {
-            PreparedStatement pstmt = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-            int count = 0;
-
-            for (T obj : objects) {
-                Map<String, Object> columnValues = columnMapper.mapColumns(obj);
-
-                int index = 1;
-                for (String column : columns) {
-                    pstmt.setObject(index++, columnValues.get(column));
-                }
-
-                pstmt.addBatch();
-                count++;
-
-                if (count % batchSize == 0) {
-                    executeBatchAndStoreKeys(pstmt, objects, idObjectMap, count - batchSize);
-                }
-            }
-
-            if (count % batchSize != 0) {
-                executeBatchAndStoreKeys(pstmt, objects, idObjectMap, count - (count % batchSize));
-            }
-        }
-
-        return idObjectMap;
-    }
-
-    private <T> void executeBatchAndStoreKeys(PreparedStatement pstmt, List<T> objects, Map<Integer, T> idObjectMap, int startIndex) throws SQLException {
-        pstmt.executeBatch();
-
-        try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
-            int currentIndex = startIndex;
-            while (generatedKeys.next()) {
-                int generatedId = generatedKeys.getInt(1); // Generierte ID abrufen
-                idObjectMap.put(generatedId, objects.get(currentIndex++));
-            }
         }
     }
 
