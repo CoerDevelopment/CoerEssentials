@@ -3,6 +3,9 @@ package de.coerdevelopment.essentials;
 import de.coerdevelopment.essentials.module.*;
 import de.coerdevelopment.essentials.module.Module;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class CoerEssentials {
 
     private static CoerEssentials instance;
@@ -25,11 +28,13 @@ public class CoerEssentials {
     private String programName;
     public String configDirectory;
     private System.Logger logger;
+    private Map<ModuleType, Module> modulesCache;
 
     private CoerEssentials(String programName) {
         configDirectory = System.getProperty("user.home") + "/CoerEssentials/";
         logger = System.getLogger("CoerEssentials");
         this.programName = programName;
+        this.modulesCache = new HashMap<>();
     }
 
     public Module enableModule(ModuleType moduleType) {
@@ -53,21 +58,36 @@ public class CoerEssentials {
      * Get the account module if it is enabled
      */
     public AccountModule getAccountModule() {
-        return (AccountModule) getModule(ModuleType.ACCOUNT);
+        Module genericModule = modulesCache.get(ModuleType.ACCOUNT);
+        if (genericModule == null) {
+            genericModule = getModule(ModuleType.ACCOUNT);
+            modulesCache.put(ModuleType.ACCOUNT, genericModule);
+        }
+        return (AccountModule) genericModule;
     }
 
     /**
      * Get the mail module if it is enabled
      */
     public MailModule getMailModule() {
-        return (MailModule) getModule(ModuleType.MAIL);
+        Module genericModule = modulesCache.get(ModuleType.MAIL);
+        if (genericModule == null) {
+            genericModule = getModule(ModuleType.MAIL);
+            modulesCache.put(ModuleType.MAIL, genericModule);
+        }
+        return (MailModule) genericModule;
     }
 
     /**
      * Get the SQL module if it is enabled
      */
     public SQLModule getSQLModule() {
-        return (SQLModule) getModule(ModuleType.SQL);
+        Module genericModule = modulesCache.get(ModuleType.SQL);
+        if (genericModule == null) {
+            genericModule = getModule(ModuleType.SQL);
+            modulesCache.put(ModuleType.SQL, genericModule);
+        }
+        return (SQLModule) genericModule;
     }
 
 
