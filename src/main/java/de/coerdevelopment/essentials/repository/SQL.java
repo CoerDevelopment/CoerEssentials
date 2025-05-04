@@ -156,6 +156,56 @@ public class SQL {
         return statement;
     }
 
+    public List<Map<String, Object>> executeQueryReturningFields(String query, Object... params) {
+        return executeQueryReturningFields(query, null, params);
+    }
+
+    public Map<String, Object> executeQueryReturningFieldsSingle(String query, Object... params) {
+        return executeQueryReturningFieldsSingle(query, null, params);
+    }
+
+    public Map<String, Object> executeQueryReturningFieldsSingle(String query, StatementCustomAction customAction, Object... params) {
+        List<Map<String, Object>> result = executeQueryReturningFields(query, customAction, params);
+        if (result.isEmpty()) {
+            return new HashMap<>();
+        }
+        return result.getFirst();
+    }
+
+    public List<Map<String, Object>> executeQueryReturningFields(String query, StatementCustomAction customAction, Object... params) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        executeQuery(query, new StatementCustomAction() {
+            @Override
+            public void onBeforeExecute(PreparedStatement statement) throws SQLException {
+                super.onBeforeExecute(statement);
+                if (customAction != null) {
+                    customAction.onBeforeExecute(statement);
+                }
+            }
+
+            @Override
+            public void onAfterExecute(PreparedStatement statement) throws SQLException {
+                super.onAfterExecute(statement);
+                if (customAction != null) {
+                    customAction.onAfterExecute(statement);
+                }
+                ResultSet rs = statement.getResultSet();
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    ResultSetMetaData metaData = rs.getMetaData();
+                    int columnCount = metaData.getColumnCount();
+                    for (int i = 1; i <= columnCount; i++) {
+                        String columnName = metaData.getColumnName(i);
+                        Object value = rs.getObject(i);
+                        row.put(columnName, value);
+                    }
+                    result.add(row);
+                }
+            }
+        }, params);
+        return result;
+    }
+
     private <T> Map<Integer, T> genericBatchInsert(String tableName, List<T> objects, ColumnMapper<T> columnMapper, int batchSize, boolean storeKeys) throws SQLException {
         if (objects.isEmpty()) {
             throw new IllegalArgumentException("The Objects are empty.");

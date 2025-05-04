@@ -37,9 +37,7 @@ public class AccountLoginRepository extends Repository {
 
     public void insertLogins(List<AccountLogin> logins) {
         try {
-            sql.batchInsert(tableName, logins,
-                    T -> Map.of("mail", T.mail, "timestamp", T.timestamp, "success", T.success, "failureReason", T.failureReason),
-                    500);
+            sql.batchInsert(tableName, logins, getColumnMapper(),500);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -48,22 +46,40 @@ public class AccountLoginRepository extends Repository {
     public List<AccountLogin> getAccountLogins(String mail) {
         List<AccountLogin> accountLogins = new ArrayList<>();
         String query = "SELECT * FROM AccountLogin WHERE mail = ?";
+        ColumnMapper<AccountLogin> columnMapper = getColumnMapper();
         sql.executeQuery(query, new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet resultSet = statement.getResultSet();
                 while (resultSet.next()) {
-                    accountLogins.add(new AccountLogin(
-                            resultSet.getInt("loginId"),
-                            resultSet.getString("mail"),
-                            resultSet.getTimestamp("timestamp"),
-                            resultSet.getBoolean("success"),
-                            resultSet.getString("failureReason")
-                    ));
+                    accountLogins.add(columnMapper.getObjectFromResultSetEntry(resultSet));
                 }
             }
         }, mail);
         return accountLogins;
+    }
+
+    private ColumnMapper<AccountLogin> getColumnMapper() {
+        return new ColumnMapper<AccountLogin>() {
+            @Override
+            public Map<String, Object> mapColumns(AccountLogin obj) {
+                return Map.of("mail", obj.mail,
+                        "timestamp", obj.timestamp,
+                        "success", obj.success,
+                        "failureReason", obj.failureReason);
+            }
+
+            @Override
+            public AccountLogin getObjectFromResultSetEntry(ResultSet resultSet) throws SQLException {
+                return new AccountLogin(
+                        resultSet.getInt("loginId"),
+                        resultSet.getString("mail"),
+                        resultSet.getTimestamp("timestamp"),
+                        resultSet.getBoolean("success"),
+                        resultSet.getString("failureReason")
+                );
+            }
+        };
     }
 
 }

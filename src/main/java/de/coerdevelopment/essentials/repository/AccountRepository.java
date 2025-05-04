@@ -244,26 +244,7 @@ public class AccountRepository extends Repository {
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    account.set(new Account(
-                            rs.getInt("accountId"),
-                            rs.getString("mail"),
-                            rs.getDate("createdDate"),
-                            rs.getDate("birthday"),
-                            rs.getString("firstName"),
-                            rs.getString("lastName"),
-                            rs.getString("username"),
-                            rs.getString("nationality"),
-                            rs.getString("location"),
-                            rs.getString("instagramUrl"),
-                            rs.getString("twitterUrl"),
-                            rs.getString("facebookUrl"),
-                            rs.getString("linkedInUrl"),
-                            rs.getString("websiteUrl"),
-                            rs.getString("aboutMe"),
-                            rs.getString("profilePictureUrl"),
-                            rs.getBoolean("isPrivate"),
-                            rs.getBoolean("mailVerified")
-                    ));
+                    account.set(getColumnMapper().getObjectFromResultSetEntry(rs));
                 }
             }
         }, accountId);
@@ -279,6 +260,34 @@ public class AccountRepository extends Repository {
             }
         }, accountId);
         return deleted.get();
+    }
+
+    private ColumnMapper<Account> getColumnMapper() {
+        return new ColumnMapper<Account>() {
+            @Override
+            public Account getObjectFromResultSetEntry(ResultSet resultSet) throws SQLException {
+                return new Account(
+                        resultSet.getInt("accountId"),
+                        resultSet.getString("mail"),
+                        resultSet.getDate("createdDate"),
+                        resultSet.getDate("birthday"),
+                        resultSet.getString("firstName"),
+                        resultSet.getString("lastName"),
+                        resultSet.getString("username"),
+                        resultSet.getString("nationality"),
+                        resultSet.getString("location"),
+                        resultSet.getString("instagramUrl"),
+                        resultSet.getString("twitterUrl"),
+                        resultSet.getString("facebookUrl"),
+                        resultSet.getString("linkedInUrl"),
+                        resultSet.getString("websiteUrl"),
+                        resultSet.getString("aboutMe"),
+                        resultSet.getString("profilePictureUrl"),
+                        resultSet.getBoolean("isPrivate"),
+                        resultSet.getBoolean("mailVerified")
+                );
+            }
+        };
     }
 
 }
