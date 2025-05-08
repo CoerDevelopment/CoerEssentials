@@ -12,11 +12,22 @@ public class CacheManager {
      * Time to live in milliseconds
      */
     private long ttl;
+    /**
+     * Maximum amount of objects to be stored in the cache
+     * If the cache is full, a random object will be removed
+     * Set to -1 for unlimited cache size
+     */
+    private final long maxCacheSize;
     private Map<String, Object> cache;
 
     public CacheManager(long ttl) {
+        this(ttl, -1);
+    }
+
+    public CacheManager(long ttl, long maxCacheSize) {
         this.ttl = ttl;
         cache = new HashMap<>();
+        this.maxCacheSize = maxCacheSize;
     }
 
     /**
@@ -36,6 +47,13 @@ public class CacheManager {
      */
     public void cacheObject(String key, Object value) {
         cache.put(key, value);
+        // check if the cache is full and remove a random object if so
+        if (maxCacheSize > 0 && cache.size() > maxCacheSize) {
+            String randomKey = cache.keySet().stream().findAny().orElse(null);
+            if (randomKey != null) {
+                cache.remove(randomKey);
+            }
+        }
         // Remove the object after the time to live
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         executor.schedule(new Runnable() {
