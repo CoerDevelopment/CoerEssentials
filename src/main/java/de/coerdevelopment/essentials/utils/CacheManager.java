@@ -91,4 +91,12 @@ public class CacheManager {
     public Map<String, Object> getCache() {
         return cache;
     }
+
+    public long getMaxCacheSize() {
+        return maxCacheSize;
+    }
+
+    public long getTtl() {
+        return ttl;
+    }
 }
