@@ -7,23 +7,22 @@ import java.net.URL;
 
 public class UrlHelper {
 
-    private static UrlHelper instance;
+    private CacheManager urlCache;
+    private boolean cacheEnabled;
     
-    public static UrlHelper getInstance() {
-        if (instance == null) {
-            instance = new UrlHelper();
+    public UrlHelper(int cacheTtl) {
+        cacheEnabled = cacheTtl <= 0;
+        if (cacheEnabled) {
+            urlCache = new CacheManager(cacheTtl);
         }
-        return instance;
     }
 
-    private CacheManager cacheManager;
-    
-    private UrlHelper() {
-        cacheManager = new CacheManager(1000*60);
+    public UrlHelper() {
+        this(-1);
     }
-    
+
     public String getJsonFromUrl(String urlString) {
-        return (String) cacheManager.getObject(urlString, new CacheAction() {
+        return (String) urlCache.getObject(urlString, new CacheAction() {
             @Override
             public Object createObject() {
                 return readFromUrl(urlString);
