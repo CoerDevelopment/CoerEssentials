@@ -4,17 +4,21 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 public class UrlHelper {
 
     private CacheManager urlCache;
     private boolean cacheEnabled;
+    private Map<String, String> headers;
     
     public UrlHelper(int cacheTtl) {
         cacheEnabled = cacheTtl <= 0;
         if (cacheEnabled) {
             urlCache = new CacheManager(cacheTtl);
         }
+        headers = new HashMap<>();
     }
 
     public UrlHelper() {
@@ -22,6 +26,9 @@ public class UrlHelper {
     }
 
     public String getJsonFromUrl(String urlString) {
+        if (!cacheEnabled) {
+            return readFromUrl(urlString);
+        }
         return (String) urlCache.getObject(urlString, new CacheAction() {
             @Override
             public Object createObject() {
@@ -37,6 +44,9 @@ public class UrlHelper {
 
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
+            for (Map.Entry<String, String> header : headers.entrySet()) {
+                conn.setRequestProperty(header.getKey(), header.getValue());
+            }
             conn.setRequestProperty("Accept", "application/json");
 
             if (conn.getResponseCode() == 200) {
@@ -55,6 +65,14 @@ public class UrlHelper {
             e.printStackTrace();
         }
         return result.toString();
+    }
+
+    public void addHeader(String key, String value) {
+        headers.put(key, value);
+    }
+
+    public void removeHeader(String key) {
+        headers.remove(key);
     }
 
 }

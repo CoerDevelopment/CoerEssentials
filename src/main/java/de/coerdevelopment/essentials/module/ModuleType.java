@@ -51,7 +51,6 @@ public enum ModuleType {
         options.put("spamProtectionEnabled", true);
         options.put("spamProtectionTimeFrameMilliseconds", 1000*60);
         options.put("spamProtectionMaxRequests", 30);
-        options.put("accountLoggingInsertionIntervalMilliseconds", 1000*60*5);
         return options;
     }
 }

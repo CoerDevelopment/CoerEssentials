@@ -6,7 +6,7 @@
 
     <groupId>de.coerdevelopment</groupId>
     <artifactId>coer-essentials</artifactId>
-    <version>1.2.11</version>
+    <version>1.2.12</version>
 
     <distributionManagement>
         <repository>
@@ -99,6 +99,16 @@
                     <artifactId>slf4j-api</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.cronutils</groupId>
+            <artifactId>cron-utils</artifactId>
+            <version>9.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.13.1</version>
         </dependency>
     </dependencies>
 

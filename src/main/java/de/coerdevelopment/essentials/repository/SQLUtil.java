@@ -1,5 +1,7 @@
 package de.coerdevelopment.essentials.repository;
 
+import org.postgresql.util.PGobject;
+
 import java.util.List;
 
 public class SQLUtil {
@@ -31,6 +33,17 @@ public class SQLUtil {
     public static String longListToSearchTerm(List<Long> input) {
         List<String> terms = input.stream().map(String::valueOf).toList();
         return String.join(",", terms);
+    }
+
+    public static PGobject getPGobject(String json) {
+        PGobject pgObject = new PGobject();
+        pgObject.setType("jsonb");
+        try {
+            pgObject.setValue(json);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set JSON value in PGobject: " + e.getMessage(), e);
+        }
+        return pgObject;
     }
 
 }
