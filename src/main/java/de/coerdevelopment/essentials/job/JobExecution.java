@@ -63,7 +63,7 @@ public class JobExecution {
             endTime = new Timestamp(System.currentTimeMillis());
             duration = ChronoUnit.MILLIS.between(startTime.toInstant(), endTime.toInstant());
             if (CoerEssentials.getInstance().getSQLModule() != null) {
-                JobRepository.getInstance().insertLog(this);
+                JobExecutionRepository.getInstance().insertLog(this);
             }
         }
     }

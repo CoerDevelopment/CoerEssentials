@@ -7,18 +7,18 @@ import org.postgresql.util.PGobject;
 import java.sql.Timestamp;
 import java.util.Map;
 
-public class JobRepository extends Repository {
+public class JobExecutionRepository extends Repository {
 
-    private static JobRepository instance;
+    private static JobExecutionRepository instance;
 
-    public static JobRepository getInstance() {
+    public static JobExecutionRepository getInstance() {
         if (instance == null) {
-            instance = new JobRepository();
+            instance = new JobExecutionRepository();
         }
         return instance;
     }
 
-    private JobRepository() {
+    private JobExecutionRepository() {
         super("JobExecutionLog");
     }
 

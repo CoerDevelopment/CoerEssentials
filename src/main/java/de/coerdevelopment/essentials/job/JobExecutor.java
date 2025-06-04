@@ -23,6 +23,7 @@ public class JobExecutor {
 
     public static void registerJob(Job job) {
         registeredJobs.put(job.getName(), job);
+        JobOptionsConfig.getInstance().saveOptions(job.name, job.getDefaultOptions(), false);
     }
 
     private static JobExecutor instance;

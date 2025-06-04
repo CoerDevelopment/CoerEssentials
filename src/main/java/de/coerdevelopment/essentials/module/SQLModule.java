@@ -1,7 +1,7 @@
 package de.coerdevelopment.essentials.module;
 
 import de.coerdevelopment.essentials.CoerEssentials;
-import de.coerdevelopment.essentials.job.JobRepository;
+import de.coerdevelopment.essentials.job.JobExecutionRepository;
 import de.coerdevelopment.essentials.repository.SQL;
 
 public class SQLModule extends Module {
@@ -28,7 +28,7 @@ public class SQLModule extends Module {
             sql.connect();
             Runtime.getRuntime().addShutdownHook(disconnectOnShutdownThread());
             CoerEssentials.getInstance().logInfo("Successfully established connection to SQL database.");
-            JobRepository.getInstance().createTable();
+            JobExecutionRepository.getInstance().createTable();
             return sql.isPoolConnected();
         } catch (Exception e) {
             CoerEssentials.getInstance().logError("Error establishing connection to SQL database.");

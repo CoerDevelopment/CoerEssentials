@@ -4,8 +4,6 @@ import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.api.AccountLogin;
 import de.coerdevelopment.essentials.job.JobExecutor;
-import de.coerdevelopment.essentials.job.JobOptions;
-import de.coerdevelopment.essentials.job.JobOptionsConfig;
 import de.coerdevelopment.essentials.job.instances.AccountLoginHistoryJob;
 import de.coerdevelopment.essentials.repository.AccountLoginRepository;
 import de.coerdevelopment.essentials.repository.AccountRepository;
@@ -14,8 +12,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -72,16 +68,6 @@ public class AccountModule extends Module {
         this.restUsagePerAccountInShortTime = new HashMap<>();
 
         JobExecutor.registerJob(new AccountLoginHistoryJob());
-        JobOptions accountHistoryOptions = new JobOptions(
-                "AccountLoginHistory",
-                true,
-                true,
-                Duration.of(5, ChronoUnit.MINUTES),
-                null,
-                false,
-                0,
-                null);
-        JobOptionsConfig.getInstance().saveOptions("AccountLoginHistory", accountHistoryOptions, false);
         JobExecutor.getInstance();
     }
 

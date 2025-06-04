@@ -17,6 +17,8 @@ public abstract class Job {
 
     protected abstract void finish(JobExecution execution);
 
+    public abstract JobOptions getDefaultOptions();
+
     public String getName() {
         return name;
     }
