@@ -25,4 +25,17 @@ public class JobOptions {
         this.maxRetries = maxRetries;
         this.retryDelayMilliseconds = retryDelay != null ? retryDelay.toMillis() : -1;
     }
+
+    public static JobOptions manual(String jobName) {
+        return new JobOptions(jobName, true, false, null, null, false, -1, null);
+    }
+
+    public static JobOptions repeating(String jobName, Duration interval) {
+        return new JobOptions(jobName, true, true, interval, null, false, -1, null);
+    }
+
+    public static JobOptions cron(String jobName, String cronExpression) {
+        return new JobOptions(jobName, true, false, null, cronExpression, false, -1, null);
+    }
+
 }

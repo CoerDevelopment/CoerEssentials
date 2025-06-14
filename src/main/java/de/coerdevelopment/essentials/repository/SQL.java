@@ -4,10 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class SQL {
@@ -277,6 +274,55 @@ public class SQL {
                 }
                 idObjectMap.put(generatedId, batch.get(i++));
             }
+        }
+    }
+
+    public <T> void batchUpdate(String tableName, List<T> objects, int batchSize, ColumnMapper<T> columnMapper, String setTemplate, String whereTemplate) throws SQLException {
+        if (objects.isEmpty()) {
+            throw new IllegalArgumentException("The Objects are empty.");
+        }
+        if (batchSize <= 0) {
+            throw new IllegalArgumentException("Batch size has to be greater than zero.");
+        }
+
+        String query = "UPDATE " + tableName + " SET " + setTemplate + " WHERE " + whereTemplate;
+        List<String> columns = Arrays.stream(setTemplate.split(","))
+                .map(String::trim)
+                .map(part -> part.split("=")[0].trim())
+                .collect(Collectors.toList());
+        List<String> whereColumns = Arrays.stream(whereTemplate.split("AND|OR"))
+                .map(String::trim)
+                .map(part -> part.split("=")[0].trim())
+                .collect(Collectors.toList());
+
+        try (Connection connection = getConnection()) {
+            boolean initialAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            int total = objects.size();
+            for (int i = 0; i < total; i += batchSize) {
+                int end = Math.min(i + batchSize, total);
+                List<T> batch = objects.subList(i, end);
+
+                try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+                    for (T obj : batch) {
+                        Map<String, Object> values = columnMapper.mapColumns(obj);
+
+                        int paramIndex = 1;
+                        for (String column : columns) {
+                            pstmt.setObject(paramIndex++, values.get(column));
+                        }
+                        for (Object whereColumn : whereColumns) {
+                            pstmt.setObject(paramIndex++, values.get(whereColumn));
+                        }
+                        pstmt.addBatch();
+                    }
+                    pstmt.executeBatch();
+                }
+            }
+
+            connection.commit();
+            connection.setAutoCommit(initialAutoCommit);
         }
     }
 
