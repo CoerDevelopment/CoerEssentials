@@ -3,16 +3,25 @@ package de.coerdevelopment.essentials.module;
 import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.api.AccountLogin;
+import de.coerdevelopment.essentials.filestorage.FileStorage;
+import de.coerdevelopment.essentials.filestorage.LocalFileStorage;
 import de.coerdevelopment.essentials.job.JobExecutor;
 import de.coerdevelopment.essentials.job.instances.AccountLoginHistoryJob;
 import de.coerdevelopment.essentials.repository.AccountLoginRepository;
 import de.coerdevelopment.essentials.repository.AccountRepository;
+import de.coerdevelopment.essentials.repository.LocalFileStorageRepository;
 import de.coerdevelopment.essentials.security.CoerSecurity;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -24,6 +33,7 @@ public class AccountModule extends Module {
     public AccountLoginRepository accountLoginRepository;
     private MailModule mailModule;
     private Map<Integer, Integer> restUsagePerAccountInShortTime;
+    private FileStorage profilePictureStorage;
 
     // Options
     private String tableName;
@@ -61,11 +71,32 @@ public class AccountModule extends Module {
         this.accountRepository = new AccountRepository(tableName);
         this.accountLoginRepository = AccountLoginRepository.getInstance();
         SQLModule sqlModule = CoerEssentials.getInstance().getSQLModule();
-        accountRepository.createTable(); // create the account table if it does not exist
+        accountRepository.createTable();
         accountLoginRepository.createTable();
+        LocalFileStorageRepository.getInstance().createTable();
         CoerSecurity.newInstance(hashAlgorithm, saltLength, tokenExpiration);
         this.mailModule = CoerEssentials.getInstance().getMailModule();
         this.restUsagePerAccountInShortTime = new HashMap<>();
+        // Initialize profile picture storage
+        String profilePictureStorageType = getStringOption("profilePictureStorage");
+        if (!profilePictureStorageType.equals("local")) {
+            throw new IllegalArgumentException("Only local storage option is supported for account profile pictures");
+        }
+        Map<String, Object> profilePictureStorageOptions = (Map<String, Object>) getOption("profilePictureStorageOptions");
+        List<String> supportedMimeTypes = (List<String>) profilePictureStorageOptions.get("supportedMimeTypes");
+        long maxFileSizeBytes = Long.valueOf(String.valueOf(profilePictureStorageOptions.get("maxFileSizeBytes")));
+        long maxStorageSizeBytes = Long.valueOf(String.valueOf(profilePictureStorageOptions.get("maxStorageSizeBytes")));
+        String storageDirectory = (String) profilePictureStorageOptions.get("storageDirectory");
+
+        Path storageDirectoryPath = Paths.get(CoerEssentials.getInstance().configDirectory + storageDirectory);
+        try {
+            this.profilePictureStorage = new LocalFileStorage(storageDirectoryPath, supportedMimeTypes, maxFileSizeBytes, maxStorageSizeBytes);
+        } catch (Exception e) {
+            CoerEssentials.getInstance().logError("Error initializing profile picture storage: " + e.getMessage());
+            throw new RuntimeException("Failed to initialize profile picture storage", e);
+        }
+
+
 
         JobExecutor.registerJob(new AccountLoginHistoryJob());
         JobExecutor.getInstance();
@@ -262,6 +293,18 @@ public class AccountModule extends Module {
 
     public boolean isAccountLocked(int accountId) {
         return accountRepository.isAccountLocked(accountId);
+    }
+
+    public String uploadProfilePicture(int accountId, MultipartFile file) throws IOException {
+        return profilePictureStorage.store(accountId, file, "profilePicture");
+    }
+
+    public Resource getProfilePicture(int accountId, int targetAccountId) {
+        Account target = getAccount(targetAccountId);
+        if (target.isPrivate && accountId != targetAccountId) {
+            throw new RuntimeException("Target account is private.");
+        }
+        return profilePictureStorage.load(targetAccountId, "profilePicture");
     }
 
     public boolean updateAccount(int accountId, Account account) {

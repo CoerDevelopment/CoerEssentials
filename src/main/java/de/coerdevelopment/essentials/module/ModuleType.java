@@ -51,6 +51,13 @@ public enum ModuleType {
         options.put("spamProtectionEnabled", true);
         options.put("spamProtectionTimeFrameMilliseconds", 1000*60);
         options.put("spamProtectionMaxRequests", 30);
+        options.put("profilePictureStorage", "local");
+        options.put("profilePictureStorageOptions", Map.of(
+                "storageDirectory", "profile_pictures",
+                "supportedMimeTypes", List.of("image/jpeg", "image/png"),
+                "maxFileSizeBytes", 1024 * 1024 * 5,
+                "maxStorageSizeBytes", -1
+        ));
         return options;
     }
 }

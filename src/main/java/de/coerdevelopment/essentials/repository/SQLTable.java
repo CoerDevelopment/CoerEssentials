@@ -96,4 +96,20 @@ public class SQLTable {
         addEntity(name, "DECIMAL(" + length + "," + digits + ")", nullable);
     }
 
+    public String getCreateIndexStatement(String indexName, String... columnName) {
+        if (columnName.length == 0) {
+            throw new IllegalArgumentException("At least one column name must be provided for index creation.");
+        }
+        String columnsStatement = String.join(", ", columnName);
+        return "CREATE INDEX IF NOT EXISTS " + indexName + " ON " + this.name + " (" + columnsStatement + ");";
+    }
+
+    public String getMultiUniqueStatement(String constraintName, String... columnName) {
+        if (columnName.length == 0) {
+            throw new IllegalArgumentException("At least one column name must be provided for unique index creation.");
+        }
+        String columnsStatement = String.join(", ", columnName);
+        return "CREATE UNIQUE INDEX IF NOT EXISTS " + constraintName + " ON " + this.name + " (" + columnsStatement + ");";
+    }
+
 }

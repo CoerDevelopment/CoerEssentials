@@ -2,10 +2,15 @@ package de.coerdevelopment.essentials.rest;
 
 import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.api.Account;
+import de.coerdevelopment.essentials.api.FileMetadata;
 import de.coerdevelopment.essentials.module.AccountModule;
+import de.coerdevelopment.essentials.repository.LocalFileStorageRepository;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -136,6 +141,38 @@ public class AccountController {
     @PutMapping("/mail/verify/{verificationCode}")
     public ResponseEntity verifyMail(@RequestAttribute("accountId") int accountId, @PathVariable("verificationCode") String verificationCode) {
         return getAccountModule().verifyMail(accountId, verificationCode);
+    }
+
+    @AuthentificationRequired
+    @PostMapping("/profilepicture")
+    public ResponseEntity<String> uploadProfilePicture(@RequestAttribute("accountId") int accountId, @RequestParam("file") MultipartFile file) {
+        try {
+            getAccountModule().uploadProfilePicture(accountId, file);
+            return ResponseEntity.ok("Profile picture uploaded successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Upload failed: " + e.getMessage());
+        }
+    }
+
+    @AuthentificationRequired
+    @GetMapping("/profilepicture")
+    public ResponseEntity<Resource> getProfilePicture(@RequestAttribute("accountId") int accountId, @PathVariable(value = "targetAccountId", required = false) String targetAccountId) {
+        if (targetAccountId == null) {
+            targetAccountId = accountId + "";
+        }
+        try {
+            Resource resource = getAccountModule().getProfilePicture(accountId, Integer.valueOf(targetAccountId));
+            FileMetadata fileMetadata = LocalFileStorageRepository.getInstance().getFileMetadataByFileName(accountId, "profilePicture");
+
+            MediaType mediaType = fileMetadata.mimeType.equals(MediaType.IMAGE_JPEG) ? MediaType.IMAGE_JPEG : MediaType.IMAGE_PNG;
+
+            return ResponseEntity.ok()
+                    .contentType(mediaType)
+                    .body(resource);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.notFound().build();
+        }
     }
 
     public static class AccountCredentialsRequest {
