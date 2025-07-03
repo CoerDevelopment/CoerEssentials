@@ -145,13 +145,12 @@ public class AccountModule extends Module {
      * Returns a token for the given account
      */
     public String getToken(Account account) {
-        Map<String, Object> claims = Map.of(
-                "accountId", account.accountId,
-                "mail", account.mail,
-                "createdDate", account.createdDate,
-                "username", account.username,
-                "mailVerified", account.mailVerified
-        );
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("accountId", account.accountId);
+        claims.put("mail", account.mail);
+        claims.put("username", account.username);
+        claims.put("createdDate", account.createdDate);
+        claims.put("mailVerified", account.mailVerified);
         return CoerSecurity.getInstance().createToken(String.valueOf(account.accountId), claims);
     }
 
