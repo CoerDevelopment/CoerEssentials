@@ -2,7 +2,9 @@ package de.coerdevelopment.essentials.rest;
 
 import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.api.Account;
+import de.coerdevelopment.essentials.api.AccountLogin;
 import de.coerdevelopment.essentials.api.FileMetadata;
+import de.coerdevelopment.essentials.job.instances.AccountLoginHistoryJob;
 import de.coerdevelopment.essentials.module.AccountModule;
 import de.coerdevelopment.essentials.repository.LocalFileStorageRepository;
 import org.springframework.core.io.Resource;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,9 +72,20 @@ public class AccountController {
                 accountLoginLocks.remove(request.mail);
             }
         }
-        int accountId = getAccountModule().login(request.mail, request.password);
-        if (accountId != -1) {
-            return ResponseEntity.ok(getAccountModule().getToken(accountId));
+        int accountId = -1;
+        try {
+            accountId = getAccountModule().login(request.mail, request.password);
+        } catch (Exception e) {
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), false, e.getMessage()));
+        }
+        Account account = getAccountModule().getAccount(accountId);
+        if (account != null && account.isLocked) {
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), false, "Account is locked"));
+            return ResponseEntity.status(HttpStatus.LOCKED).body("Account is locked");
+        }
+        if (account != null) {
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), accountId != -1, ""));
+            return ResponseEntity.ok(getAccountModule().getToken(account));
         } else {
             // save failed login attempts
             failedLoginAttemptsPerMail.put(request.mail, failedLoginAttemptsPerMail.getOrDefault(request.mail, 0) + 1);
@@ -88,11 +102,8 @@ public class AccountController {
                 }
             }, LOCK_DURATION_SECONDS, TimeUnit.SECONDS);
 
-            if (getAccountModule().isAccountLocked(accountId)) {
-                return ResponseEntity.status(HttpStatus.LOCKED).body("Account is locked");
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
-            }
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), false, "Invalid credentials"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
     }
 

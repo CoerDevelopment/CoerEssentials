@@ -16,6 +16,7 @@ import java.security.SecureRandom;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
 
 public class CoerSecurity {
     
@@ -54,12 +55,13 @@ public class CoerSecurity {
         instance = this;
     }
 
-    public String createToken(String subject, long expiration) {
+    public String createToken(String subject, long expiration, Map<String, Object> claims) {
         Date now = new Date();
         Date expirationDate = new Date(now.getTime() + expiration);
         String token = Jwts.builder()
                 .setSubject(subject)
                 .setIssuedAt(now)
+                .claims(claims)
                 .setExpiration(expirationDate)
                 .signWith(SIGNATURE_ALGORITHM, SECRET_KEY)
                 .compact();
@@ -67,7 +69,11 @@ public class CoerSecurity {
     }
 
     public String createToken(String subject) {
-        return createToken(subject, TOKEN_EXPIRATION);
+        return createToken(subject, TOKEN_EXPIRATION, null);
+    }
+
+    public String createToken(String subject, Map<String, Object> claims) {
+        return createToken(subject, TOKEN_EXPIRATION, claims);
     }
 
     public String createToken(int subject) {
@@ -75,10 +81,26 @@ public class CoerSecurity {
     }
 
     public String createToken(int subject, long expiration) {
-        return createToken(String.valueOf(subject), expiration);
+        return createToken(String.valueOf(subject), expiration, null);
     }
 
-    public String getStringFromToken(String token) {
+    public String createToken(String subject, long expiration) {
+        return createToken(String.valueOf(subject), expiration, null);
+    }
+
+    public Object getClaim(String token, String key) {
+        try {
+            if (!isTokenValid(token)) {
+                throw new IllegalStateException("Token is invalid");
+            }
+            Claims claims = Jwts.parser().setSigningKey(SECRET_KEY).build().parseClaimsJws(token).getBody();
+            return claims.get(key);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Token is invalid");
+        }
+    }
+
+    public String getSubjectFromToken(String token) {
         try {
             if (!isTokenValid(token)) {
                 throw new IllegalStateException("Token is invalid");
@@ -90,8 +112,8 @@ public class CoerSecurity {
         }
     }
 
-    public int getIntFromToken(String token) {
-        return Integer.parseInt(getStringFromToken(token));
+    public int getSubjectFromTokenAsInt(String token) {
+        return Integer.parseInt(getSubjectFromToken(token));
     }
 
     private boolean isTokenValid(String token) {

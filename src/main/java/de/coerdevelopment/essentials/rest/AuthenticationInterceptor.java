@@ -1,6 +1,7 @@
 package de.coerdevelopment.essentials.rest;
 
 import de.coerdevelopment.essentials.CoerEssentials;
+import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,9 +32,14 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         }
 
         try {
-            int accountId = CoerSecurity.getInstance().getIntFromToken(token);
+            int accountId = CoerSecurity.getInstance().getSubjectFromTokenAsInt(token);
             if (accountId <= 0) {
                 response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid or expired token");
+                return false;
+            }
+            Account account = CoerEssentials.getInstance().getAccountModule().getAccount(accountId);
+            if (account.isLocked) {
+                response.sendError(HttpStatus.LOCKED.value(), "Account is locked");
                 return false;
             }
             if (CoerEssentials.getInstance().getAccountModule().isAccountSpamProtected(accountId)) {

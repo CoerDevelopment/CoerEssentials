@@ -2,10 +2,10 @@ package de.coerdevelopment.essentials.module;
 
 import de.coerdevelopment.essentials.CoerEssentials;
 import de.coerdevelopment.essentials.api.Account;
-import de.coerdevelopment.essentials.api.AccountLogin;
 import de.coerdevelopment.essentials.filestorage.FileStorage;
 import de.coerdevelopment.essentials.filestorage.LocalFileStorage;
 import de.coerdevelopment.essentials.job.JobExecutor;
+import de.coerdevelopment.essentials.job.instances.AccountCacheJob;
 import de.coerdevelopment.essentials.job.instances.AccountLoginHistoryJob;
 import de.coerdevelopment.essentials.repository.AccountLoginRepository;
 import de.coerdevelopment.essentials.repository.AccountRepository;
@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Date;
-import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +33,7 @@ public class AccountModule extends Module {
     private MailModule mailModule;
     private Map<Integer, Integer> restUsagePerAccountInShortTime;
     private FileStorage profilePictureStorage;
+    private Map<Integer, Account> accountsById;
 
     // Options
     private String tableName;
@@ -96,9 +96,10 @@ public class AccountModule extends Module {
             throw new RuntimeException("Failed to initialize profile picture storage", e);
         }
 
-
+        accountsById = new HashMap<>();
 
         JobExecutor.registerJob(new AccountLoginHistoryJob());
+        JobExecutor.registerJob(new AccountCacheJob()   );
         JobExecutor.getInstance();
     }
 
@@ -135,22 +136,23 @@ public class AccountModule extends Module {
     /**
      * Checks the provided credentials and returns the account id if they are correct
      */
-    public int login(String mail, String passwordHash) {
+    public int login(String mail, String passwordHash) throws Exception {
         int accountId = -1;
-        try {
-            accountId = accountRepository.getAccountIdIfPasswortMatches(mail, passwordHash);
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(mail, new Timestamp(System.currentTimeMillis()), accountId != -1, ""));
-        } catch (Exception e) {
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(mail, new Timestamp(System.currentTimeMillis()), false, e.getMessage()));
-        }
-        return accountId;
+        return accountRepository.getAccountIdIfPasswortMatches(mail, passwordHash);
     }
 
     /**
      * Returns a token for the given account
      */
-    public String getToken(int accountId) {
-        return CoerSecurity.getInstance().createToken(accountId);
+    public String getToken(Account account) {
+        Map<String, Object> claims = Map.of(
+                "accountId", account.accountId,
+                "mail", account.mail,
+                "createdDate", account.createdDate,
+                "username", account.username,
+                "mailVerified", account.mailVerified
+        );
+        return CoerSecurity.getInstance().createToken(String.valueOf(account.accountId), claims);
     }
 
     /**
@@ -245,7 +247,7 @@ public class AccountModule extends Module {
         // check if token is valid
         String subject;
         try {
-            subject = CoerSecurity.getInstance().getStringFromToken(token);
+            subject = CoerSecurity.getInstance().getSubjectFromToken(token);
         } catch (Exception e) {
             return false;
         }
@@ -263,7 +265,7 @@ public class AccountModule extends Module {
 
     /**
      * Checks if the account is spam protected
-     * If the account is spam protected, the requests will not be processed
+     * If the account is spam protected, the requests will not be processed and the client call will be logged
      */
     public boolean isAccountSpamProtected(int accountId) {
         if (!spamProtectionEnabled) {
@@ -285,14 +287,12 @@ public class AccountModule extends Module {
 
     public void lockAccount(int accountId) {
         accountRepository.setProperty(accountId, "isLocked", true);
+        accountsById.get(accountId).isLocked = true;
     }
 
     public void unlockAccount(int accountId) {
         accountRepository.setProperty(accountId, "isLocked", false);
-    }
-
-    public boolean isAccountLocked(int accountId) {
-        return accountRepository.isAccountLocked(accountId);
+        accountsById.get(accountId).isLocked = false;
     }
 
     public String uploadProfilePicture(int accountId, MultipartFile file) throws IOException {
@@ -308,6 +308,11 @@ public class AccountModule extends Module {
     }
 
     public boolean updateAccount(int accountId, Account account) {
+        Account currentState = getAccount(accountId);
+        if (currentState.isLocked != account.isLocked) {
+            return false;
+        }
+        accountsById.put(accountId, account);
         return accountRepository.updateAccount(accountId, account);
     }
 
@@ -410,7 +415,7 @@ public class AccountModule extends Module {
      * Returns the account with the given id
      */
     public Account getAccount(int accountId) {
-        return accountRepository.getAccount(accountId);
+        return accountsById.get(accountId);
     }
 
     /**
@@ -431,6 +436,12 @@ public class AccountModule extends Module {
             code += (int) (Math.random() * 10);
         }
         return code;
+    }
+
+    public int updateAccounts() {
+        accountsById.clear();
+        accountsById = accountRepository.getAllAccountsById();
+        return accountsById.size();
     }
 
 }

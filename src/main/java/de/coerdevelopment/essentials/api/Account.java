@@ -24,12 +24,13 @@ public class Account {
     public String aboutMe;
     public String profilePictureUrl;
     public boolean isPrivate;
+    public boolean isLocked;
     public boolean mailVerified;
 
     public Account() {
     }
 
-    public Account(int accountId, String mail, Date createdDate, Date birthday, String firstName, String lastName, String username, String nationality, String location, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean mailVerified) {
+    public Account(int accountId, String mail, Date createdDate, Date birthday, String firstName, String lastName, String username, String nationality, String location, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
         this.accountId = accountId;
         this.mail = mail;
         this.createdDate = createdDate;
@@ -47,6 +48,7 @@ public class Account {
         this.aboutMe = aboutMe;
         this.profilePictureUrl = profilePictureUrl;
         this.isPrivate = isPrivate;
+        this.isLocked = isLocked;
         this.mailVerified = mailVerified;
         calcAge();
     }

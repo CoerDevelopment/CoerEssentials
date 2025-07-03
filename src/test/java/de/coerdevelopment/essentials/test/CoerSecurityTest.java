@@ -21,7 +21,7 @@ public class CoerSecurityTest {
         Random random = new Random();
         int randomSubject = random.nextInt(10000);
         String token = CoerSecurity.getInstance().createToken(randomSubject);
-        int subject = CoerSecurity.getInstance().getIntFromToken(token);
+        int subject = CoerSecurity.getInstance().getSubjectFromTokenAsInt(token);
         Assertions.assertEquals(randomSubject, subject, "Subject does not match");
     }
 

@@ -4,6 +4,8 @@ import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -165,7 +167,7 @@ public class AccountRepository extends Repository {
         AtomicBoolean matches = new AtomicBoolean(false);
         AtomicBoolean accountExists = new AtomicBoolean(false);
         AtomicInteger accountId = new AtomicInteger(-1);
-        PreparedStatement statement = sql.executeQuery("SELECT accountId, password, salt FROM " + tableName + " WHERE mail = ? AND isLocked = false", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT accountId, password, salt FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
@@ -223,18 +225,18 @@ public class AccountRepository extends Repository {
         sql.executeQuery("UPDATE " + tableName + " SET " + property + " = ? WHERE accountId = ?", value, accountId);
     }
 
-    public boolean isAccountLocked(int accountId) {
-        AtomicBoolean isLocked = new AtomicBoolean(false);
-        sql.executeQuery("SELECT isLocked FROM " + tableName + " WHERE accountId = ?", new StatementCustomAction() {
+    public Map<Integer, Account> getAllAccountsById() {
+        Map<Integer, Account> accounts = new HashMap<>();
+        sql.executeQuery("SELECT * FROM " + tableName, new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
-                if (rs.next()) {
-                    isLocked.set(rs.getBoolean("isLocked"));
+                while (rs.next()) {
+                    accounts.put(rs.getInt("accountId"), getColumnMapper().getObjectFromResultSetEntry(rs));
                 }
             }
-        }, accountId);
-        return isLocked.get();
+        });
+        return accounts;
     }
 
     public Account getAccount(int accountId) {
@@ -284,6 +286,7 @@ public class AccountRepository extends Repository {
                         resultSet.getString("aboutMe"),
                         resultSet.getString("profilePictureUrl"),
                         resultSet.getBoolean("isPrivate"),
+                        resultSet.getBoolean("isLocked"),
                         resultSet.getBoolean("mailVerified")
                 );
             }
