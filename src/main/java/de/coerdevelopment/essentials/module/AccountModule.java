@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Date;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ public class AccountModule extends Module {
     private Map<Integer, Integer> restUsagePerAccountInShortTime;
     private FileStorage profilePictureStorage;
     private Map<Integer, Account> accountsById;
+    private List<String> blacklistedRefreshTokens;
 
     // Options
     private String tableName;
@@ -44,6 +46,7 @@ public class AccountModule extends Module {
     private long mailVerificationCodeExpiration;
     private long passwordResetCodeExpiration;
     private long tokenExpiration;
+    public long refreshTokenExpiration;
     private String passwortResetUrl;
     public int maxLoginTriesInShortTime;
     public int maxPasswordResetTriesInShortTime;
@@ -61,6 +64,7 @@ public class AccountModule extends Module {
         this.mailVerificationCodeExpiration = getLongOption("mailConfirmationTokenExpirationMilliseconds");
         this.passwordResetCodeExpiration = getLongOption("passwordResetExpirationMilliseconds");
         this.tokenExpiration = getLongOption("tokenExpirationMilliseconds");
+        this.refreshTokenExpiration = getLongOption("refreshTokenExpiration");
         this.maxLoginTriesInShortTime = getIntOption("maxLoginTriesInShortTime");
         this.maxPasswordResetTriesInShortTime = getIntOption("maxPasswordResetTriesInShortTime");
         this.passwortResetUrl = getStringOption("resetPasswordUrl");
@@ -69,6 +73,7 @@ public class AccountModule extends Module {
         this.spamProtectionMaxRequests = getIntOption("spamProtectionMaxRequests");
 
         this.accountRepository = new AccountRepository(tableName);
+        this.blacklistedRefreshTokens = new ArrayList<>();
         this.accountLoginRepository = AccountLoginRepository.getInstance();
         SQLModule sqlModule = CoerEssentials.getInstance().getSQLModule();
         accountRepository.createTable();
@@ -153,6 +158,14 @@ public class AccountModule extends Module {
         claims.put("createdDate", account.createdDate);
         claims.put("mailVerified", account.mailVerified);
         return CoerSecurity.getInstance().createToken(String.valueOf(account.accountId), claims);
+    }
+
+    public void blacklistRefreshToken(String token) {
+        blacklistedRefreshTokens.add(token);
+    }
+
+    public boolean isRefreshTokenBlacklisted(String token) {
+        return blacklistedRefreshTokens.contains(token);
     }
 
     /**

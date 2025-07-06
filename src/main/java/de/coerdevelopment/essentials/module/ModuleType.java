@@ -1,5 +1,6 @@
 package de.coerdevelopment.essentials.module;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,8 @@ public enum ModuleType {
         options.put("mailConfirmationTokenLength", 8);
         options.put("mailConfirmationTokenExpirationMilliseconds", 1000 * 60 * 60);
         options.put("passwordResetExpirationMilliseconds", 1000 * 60 * 30);
-        options.put("tokenExpirationMilliseconds", 1000 * 60 * 60 * 24);
+        options.put("tokenExpirationMilliseconds", Duration.ofMinutes(15).toMillis());
+        options.put("refreshTokenExpiration", Duration.ofDays(7).toMillis());
         options.put("maxLoginTriesInShortTime", 10);
         options.put("maxPasswordResetTriesInShortTime", 3);
         options.put("resetPasswordUrl", "https://sample.com/resetPassword?%token%");

@@ -7,10 +7,11 @@ import de.coerdevelopment.essentials.api.FileMetadata;
 import de.coerdevelopment.essentials.job.instances.AccountLoginHistoryJob;
 import de.coerdevelopment.essentials.module.AccountModule;
 import de.coerdevelopment.essentials.repository.LocalFileStorageRepository;
+import de.coerdevelopment.essentials.security.CoerSecurity;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -86,7 +87,18 @@ public class AccountController {
         }
         if (account != null) {
             AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), accountId != -1, ""));
-            return ResponseEntity.ok(getAccountModule().getToken(account));
+            final long TOKEN_EXPIRATION = getAccountModule().refreshTokenExpiration;
+            String refreshToken = CoerSecurity.getInstance().createToken(accountId, TOKEN_EXPIRATION);
+            ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
+                    .httpOnly(true)
+                    .secure(true)
+                    .path("/security/refresh")
+                    .maxAge(TOKEN_EXPIRATION / 1000)
+                    .build();
+            ResponseEntity<String> response = ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(getAccountModule().getToken(account));
+            return response;
         } else {
             // save failed login attempts
             failedLoginAttemptsPerMail.put(request.mail, failedLoginAttemptsPerMail.getOrDefault(request.mail, 0) + 1);
@@ -106,6 +118,33 @@ public class AccountController {
             AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), false, "Invalid credentials"));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
+    }
+
+    @PostMapping("/security/refresh")
+    public ResponseEntity<String> refreshToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals("refreshToken")) {
+                    String refreshToken = cookie.getValue();
+                    if (getAccountModule().isRefreshTokenBlacklisted(refreshToken)) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token is blacklisted");
+                    }
+                    int accountId = CoerSecurity.getInstance().getSubjectFromTokenAsInt(refreshToken);
+                    Account account = getAccountModule().getAccount(accountId);
+                    if (accountId > 0 && account != null && !account.isLocked) {
+                        String newAccessToken = getAccountModule().getToken(account);
+
+                        return ResponseEntity.ok(newAccessToken);
+                    } else {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+                    }
+                }
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refresh token missing");
     }
 
     @PostMapping("/security/requestpasswordreset/{mail}")
