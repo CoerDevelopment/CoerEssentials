@@ -76,6 +76,7 @@ public class AccountController {
         try {
             accountId = getAccountModule().login(request.mail, request.password);
         } catch (Exception e) {
+            CoerEssentials.getInstance().logError(e.getMessage());
             AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), false, e.getMessage()));
         }
         Account account = getAccountModule().getAccount(accountId);

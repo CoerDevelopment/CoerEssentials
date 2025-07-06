@@ -121,6 +121,8 @@ public class AccountModule extends Module {
         int accountId;
         try {
             accountId = accountRepository.insertAccount(mail, passwordHash, salt);
+            Account account = accountRepository.getAccount(accountId);
+            accountsById.put(accountId, account);
         } catch (Exception e) {
             CoerEssentials.getInstance().logWarning("Error creating account: " + e.getMessage());
             return false;
@@ -137,7 +139,6 @@ public class AccountModule extends Module {
      * Checks the provided credentials and returns the account id if they are correct
      */
     public int login(String mail, String passwordHash) throws Exception {
-        int accountId = -1;
         return accountRepository.getAccountIdIfPasswortMatches(mail, passwordHash);
     }
 
