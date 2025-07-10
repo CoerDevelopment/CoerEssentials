@@ -77,6 +77,36 @@ public class LocalFileStorageRepository extends Repository{
         return files.isEmpty() ? null : files.getFirst();
     }
 
+    public List<FileMetadata> getFileMetadataByAccounts(List<Integer> accountIds, String fileName) {
+        List<FileMetadata> files = new ArrayList<>();
+        String query = "SELECT * FROM " + tableName + " WHERE accountId IN (" + SQLUtil.integerListToSearchTerm(accountIds) + ") AND fileName = ?";
+        sql.executeQuery(query, new StatementCustomAction() {
+            @Override
+            public void onAfterExecute(PreparedStatement statement) throws SQLException {
+                ResultSet rs = statement.executeQuery();
+                while (rs.next()) {
+                    files.add(columnMapper.getObjectFromResultSetEntry(rs));
+                }
+            }
+        }, fileName);
+        return files;
+    }
+
+    public FileMetadata getFileMetadataByUUID(String uuid) {
+        List<FileMetadata> files = new ArrayList<>();
+        String query = "SELECT * FROM " + tableName + " WHERE storedFileName LIKE ?";
+        sql.executeQuery(query, new StatementCustomAction() {
+            @Override
+            public void onAfterExecute(PreparedStatement statement) throws SQLException {
+                ResultSet rs = statement.executeQuery();
+                if (rs.next()) {
+                    files.add(columnMapper.getObjectFromResultSetEntry(rs));
+                }
+            }
+        }, uuid + "%");
+        return files.isEmpty() ? null : files.getFirst();
+    }
+
     public void deleteMetadata(int accountId, String fileName) {
         String query = "DELETE FROM " + tableName + " WHERE accountId = ? AND fileName = ?";
         sql.executeQuery(query, accountId, fileName);

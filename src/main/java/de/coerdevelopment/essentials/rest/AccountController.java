@@ -91,8 +91,8 @@ public class AccountController {
             String refreshToken = CoerSecurity.getInstance().createToken(accountId, TOKEN_EXPIRATION);
             ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                     .httpOnly(true)
-                    .secure(true)
-                    .path("/security/refresh")
+                    .secure(getAccountModule().refreshTokenSecure)
+                    .path("/api/account/security/refresh")
                     .maxAge(TOKEN_EXPIRATION / 1000)
                     .build();
             ResponseEntity<String> response = ResponseEntity.ok()
@@ -207,12 +207,28 @@ public class AccountController {
 
     @AuthentificationRequired
     @GetMapping("/profilepicture")
-    public ResponseEntity<Resource> getProfilePicture(@RequestAttribute("accountId") int accountId, @PathVariable(value = "targetAccountId", required = false) String targetAccountId) {
-        if (targetAccountId == null) {
-            targetAccountId = accountId + "";
-        }
+    public ResponseEntity<Resource> getProfilePicture(@RequestAttribute("accountId") int accountId) {
         try {
-            Resource resource = getAccountModule().getProfilePicture(accountId, Integer.valueOf(targetAccountId));
+            Resource resource = getAccountModule().getProfilePicture(accountId, accountId);
+            FileMetadata fileMetadata = LocalFileStorageRepository.getInstance().getFileMetadataByFileName(accountId, "profilePicture");
+
+            MediaType mediaType = fileMetadata.mimeType.equals(MediaType.IMAGE_JPEG) ? MediaType.IMAGE_JPEG : MediaType.IMAGE_PNG;
+
+            return ResponseEntity.ok()
+                    .contentType(mediaType)
+                    .body(resource);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @AuthentificationRequired
+    @GetMapping("/profilepicture/{fileUUID}")
+    public ResponseEntity<Resource> getProfilePicture(@RequestAttribute("accountId") int accountId, @PathVariable("fileUUID") String fileUUID) {
+        try {
+            FileMetadata metadata = LocalFileStorageRepository.getInstance().getFileMetadataByUUID(fileUUID);
+            Resource resource = getAccountModule().getProfilePicture(accountId, metadata.accountId);
             FileMetadata fileMetadata = LocalFileStorageRepository.getInstance().getFileMetadataByFileName(accountId, "profilePicture");
 
             MediaType mediaType = fileMetadata.mimeType.equals(MediaType.IMAGE_JPEG) ? MediaType.IMAGE_JPEG : MediaType.IMAGE_PNG;

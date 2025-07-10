@@ -47,6 +47,7 @@ public class AccountModule extends Module {
     private long passwordResetCodeExpiration;
     private long tokenExpiration;
     public long refreshTokenExpiration;
+    public boolean refreshTokenSecure;
     private String passwortResetUrl;
     public int maxLoginTriesInShortTime;
     public int maxPasswordResetTriesInShortTime;
@@ -65,6 +66,7 @@ public class AccountModule extends Module {
         this.passwordResetCodeExpiration = getLongOption("passwordResetExpirationMilliseconds");
         this.tokenExpiration = getLongOption("tokenExpirationMilliseconds");
         this.refreshTokenExpiration = getLongOption("refreshTokenExpiration");
+        this.refreshTokenSecure = getBooleanOption("refreshTokenSecure");
         this.maxLoginTriesInShortTime = getIntOption("maxLoginTriesInShortTime");
         this.maxPasswordResetTriesInShortTime = getIntOption("maxPasswordResetTriesInShortTime");
         this.passwortResetUrl = getStringOption("resetPasswordUrl");

@@ -47,6 +47,7 @@ public enum ModuleType {
         options.put("passwordResetExpirationMilliseconds", 1000 * 60 * 30);
         options.put("tokenExpirationMilliseconds", Duration.ofMinutes(15).toMillis());
         options.put("refreshTokenExpiration", Duration.ofDays(7).toMillis());
+        options.put("refreshTokenSecure", true);
         options.put("maxLoginTriesInShortTime", 10);
         options.put("maxPasswordResetTriesInShortTime", 3);
         options.put("resetPasswordUrl", "https://sample.com/resetPassword?%token%");
