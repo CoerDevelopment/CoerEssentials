@@ -1,8 +1,15 @@
 package de.coerdevelopment.essentials.api;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import de.coerdevelopment.essentials.utils.CurrencyUnitDeserializer;
+import de.coerdevelopment.essentials.utils.CurrencyUnitSerializer;
+
+import javax.money.CurrencyUnit;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.Date;
+import java.util.Locale;
 
 public class Account {
 
@@ -16,6 +23,10 @@ public class Account {
     public String username;
     public String nationality;
     public String location;
+    public Locale locale;
+    @JsonSerialize(using = CurrencyUnitSerializer.class)
+    @JsonDeserialize(using = CurrencyUnitDeserializer.class)
+    public CurrencyUnit preferredCurrency;
     public String instagramUrl;
     public String twitterUrl;
     public String facebookUrl;
@@ -30,7 +41,7 @@ public class Account {
     public Account() {
     }
 
-    public Account(int accountId, String mail, Date createdDate, Date birthday, String firstName, String lastName, String username, String nationality, String location, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
+    public Account(int accountId, String mail, Date createdDate, Date birthday, String firstName, String lastName, String username, String nationality, String location, Locale locale, CurrencyUnit preferredCurrency, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
         this.accountId = accountId;
         this.mail = mail;
         this.createdDate = createdDate;
@@ -40,6 +51,8 @@ public class Account {
         this.username = username;
         this.nationality = nationality;
         this.location = location;
+        this.locale = locale;
+        this.preferredCurrency = preferredCurrency;
         this.instagramUrl = instagramUrl;
         this.twitterUrl = twitterUrl;
         this.facebookUrl = facebookUrl;

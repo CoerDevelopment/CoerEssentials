@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,7 +40,7 @@ public class AccountController {
      */
     @PostMapping()
     public ResponseEntity<String> createAccount(@RequestBody AccountCredentialsRequest request) {
-        if (getAccountModule().createAccount(request.mail, request.password)) {
+        if (getAccountModule().createAccount(request.mail, request.password, request.locale)) {
             return login(request);
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Unable to create the account. Maybe there is already an account with this mail.");
@@ -245,6 +246,7 @@ public class AccountController {
     public static class AccountCredentialsRequest {
         public String mail;
         public String password;
+        public Locale locale;
 
         public AccountCredentialsRequest() {
         }

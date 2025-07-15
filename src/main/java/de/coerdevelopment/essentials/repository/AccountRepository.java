@@ -3,8 +3,10 @@ package de.coerdevelopment.essentials.repository;
 import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 
+import javax.money.Monetary;
 import java.sql.*;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,6 +32,8 @@ public class AccountRepository extends Repository {
         table.addString("username", 32, true);
         table.addString("nationality", 64, true);
         table.addString("location", 64, true);
+        table.addString("locale", 20, false);
+        table.addString("preferredCurrency", 3, false);
         table.addString("instagramUrl", 128, true);
         table.addString("twitterUrl", 128, true);
         table.addString("facebookUrl", 128, true);
@@ -45,9 +49,9 @@ public class AccountRepository extends Repository {
 
     }
 
-    public int insertAccount(String mail, String password, String salt) {
+    public int insertAccount(String mail, String password, String salt, Locale locale) {
         AtomicInteger accountId = new AtomicInteger(-1);
-        PreparedStatement statement = sql.executeQueryReturningKeys("INSERT INTO " + tableName + " (mail, password, salt, createdDate) VALUES (?, ?, ?, ?)", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQueryReturningKeys("INSERT INTO " + tableName + " (mail, password, salt, createdDate, locale, preferredCurrency) VALUES (?, ?, ?, ?, ?, ?)", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getGeneratedKeys();
@@ -55,7 +59,7 @@ public class AccountRepository extends Repository {
                     accountId.set(rs.getInt(1));
                 }
             }
-        }, mail, password, salt, new Timestamp(System.currentTimeMillis()));
+        }, mail, password, salt, new Timestamp(System.currentTimeMillis()), locale.toLanguageTag(), Monetary.getCurrency(locale).getCurrencyCode());
         return accountId.get();
     }
 
@@ -199,22 +203,25 @@ public class AccountRepository extends Repository {
     public boolean updateAccount(int accountId, Account account) {
         try (Connection connection = sql.getConnection()) {
             PreparedStatement ps = connection.prepareStatement("UPDATE " + tableName + " SET " +
-                    "birthday = ?, firstName = ?, lastName = ?, username = ?, nationality = ?, location = ?, instagramUrl = ?, twitterUrl = ?, facebookUrl = ?, linkedInUrl = ?, websiteUrl = ?, aboutMe = ?, profilePictureUrl = ?, isPrivate = ? WHERE accountId = ?");
-            ps.setDate(1, account.birthday != null ? new Date(account.birthday.getTime()) : null);
-            ps.setString(2, account.firstName);
-            ps.setString(3, account.lastName);
-            ps.setString(4, account.username);
-            ps.setString(5, account.nationality);
-            ps.setString(6, account.location);
-            ps.setString(7, account.instagramUrl);
-            ps.setString(8, account.twitterUrl);
-            ps.setString(9, account.facebookUrl);
-            ps.setString(10, account.linkedinUrl);
-            ps.setString(11, account.websiteUrl);
-            ps.setString(12, account.aboutMe);
-            ps.setString(13, account.profilePictureUrl);
-            ps.setBoolean(14, account.isPrivate);
-            ps.setInt(15, accountId);
+                    "birthday = ?, firstName = ?, lastName = ?, username = ?, nationality = ?, location = ?, locale = ?, preferredCurrency = ?, instagramUrl = ?, twitterUrl = ?, facebookUrl = ?, linkedInUrl = ?, websiteUrl = ?, aboutMe = ?, profilePictureUrl = ?, isPrivate = ? WHERE accountId = ?");
+            int index = 1;
+            ps.setDate(index++, account.birthday != null ? new Date(account.birthday.getTime()) : null);
+            ps.setString(index++, account.firstName);
+            ps.setString(index++, account.lastName);
+            ps.setString(index++, account.username);
+            ps.setString(index++, account.nationality);
+            ps.setString(index++, account.location);
+            ps.setString(index++, account.locale.toLanguageTag());
+            ps.setString(index++, account.preferredCurrency.getCurrencyCode());
+            ps.setString(index++, account.instagramUrl);
+            ps.setString(index++, account.twitterUrl);
+            ps.setString(index++, account.facebookUrl);
+            ps.setString(index++, account.linkedinUrl);
+            ps.setString(index++, account.websiteUrl);
+            ps.setString(index++, account.aboutMe);
+            ps.setString(index++, account.profilePictureUrl);
+            ps.setBoolean(index++, account.isPrivate);
+            ps.setInt(index++, accountId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -278,6 +285,8 @@ public class AccountRepository extends Repository {
                         resultSet.getString("username"),
                         resultSet.getString("nationality"),
                         resultSet.getString("location"),
+                        Locale.forLanguageTag(resultSet.getString("locale")),
+                        Monetary.getCurrency(resultSet.getString("preferredCurrency")),
                         resultSet.getString("instagramUrl"),
                         resultSet.getString("twitterUrl"),
                         resultSet.getString("facebookUrl"),

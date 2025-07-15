@@ -19,10 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Date;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -114,7 +111,7 @@ public class AccountModule extends Module {
      * Creates a new account if the mail is not already in use
      * @return true if the account was created, otherwise false
      */
-    public boolean createAccount(String mail, String password) {
+    public boolean createAccount(String mail, String password, Locale locale) {
         // check if this mail is already associated with an account
         if (accountRepository.doesMailExists(mail)) {
             return false;
@@ -127,7 +124,7 @@ public class AccountModule extends Module {
         // create the account in database
         int accountId;
         try {
-            accountId = accountRepository.insertAccount(mail, passwordHash, salt);
+            accountId = accountRepository.insertAccount(mail, passwordHash, salt, locale);
             Account account = accountRepository.getAccount(accountId);
             accountsById.put(accountId, account);
         } catch (Exception e) {
@@ -158,6 +155,8 @@ public class AccountModule extends Module {
         claims.put("mail", account.mail);
         claims.put("username", account.username);
         claims.put("createdDate", account.createdDate);
+        claims.put("locale", account.locale.toLanguageTag());
+        claims.put("defaultCurrency", account.preferredCurrency.getCurrencyCode());
         claims.put("mailVerified", account.mailVerified);
         return CoerSecurity.getInstance().createToken(String.valueOf(account.accountId), claims);
     }
