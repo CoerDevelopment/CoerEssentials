@@ -51,7 +51,7 @@ public class JobExecutionRepository extends Repository {
         String optionsJson = new Gson().toJson(jobExecution.options);
         sql.executeQuery(query, jobExecution.uuid.toString(),
                 jobExecution.job.getName(),
-                SQLUtil.getPGobject(optionsJson),
+                SQLUtil.getJsonPgObject(optionsJson),
                 jobExecution.data,
                 jobExecution.stackTrace,
                 jobExecution.startTime,

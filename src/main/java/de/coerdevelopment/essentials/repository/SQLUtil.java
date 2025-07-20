@@ -35,13 +35,24 @@ public class SQLUtil {
         return String.join(",", terms);
     }
 
-    public static PGobject getPGobject(String json) {
+    public static PGobject getJsonPgObject(String json) {
         PGobject pgObject = new PGobject();
         pgObject.setType("jsonb");
         try {
             pgObject.setValue(json);
         } catch (Exception e) {
             throw new RuntimeException("Failed to set JSON value in PGobject: " + e.getMessage(), e);
+        }
+        return pgObject;
+    }
+
+    public static PGobject getEnumPgObject(DatabaseEnum databaseEnum) {
+        PGobject pgObject = new PGobject();
+        pgObject.setType(databaseEnum.getDatabaseEnumName());
+        try {
+            pgObject.setValue(databaseEnum.toString());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set enum value in PGobject: " + e.getMessage(), e);
         }
         return pgObject;
     }

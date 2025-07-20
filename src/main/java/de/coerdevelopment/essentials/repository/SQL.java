@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class SQL {
@@ -324,6 +325,38 @@ public class SQL {
             connection.commit();
             connection.setAutoCommit(initialAutoCommit);
         }
+    }
+
+    public void createEnumTypeIfNotExists(String enumName, Class<? extends Enum<?>> enumClass) {
+        if (enumClass == null || !enumClass.isEnum()) {
+            throw new IllegalArgumentException("Provided class is not an enum.");
+        }
+        List<String> values = Arrays.stream(enumClass.getEnumConstants())
+                .map(Enum::name)
+                .collect(Collectors.toList());
+        createEnumTypeIfNotExists(enumName, values);
+    }
+
+    public void createEnumTypeIfNotExists(String enumName, List<String> values) {
+        if (values.isEmpty()) {
+            throw new IllegalArgumentException("Enum values cannot be empty.");
+        }
+        enumName = enumName.toLowerCase();
+        String existsQuery = "SELECT 1 FROM pg_type WHERE typname = ?";
+        AtomicBoolean exists = new AtomicBoolean(false);
+        executeQuery(existsQuery, new StatementCustomAction() {
+            @Override
+            public void onAfterExecute(PreparedStatement statement) throws SQLException {
+                ResultSet rs = statement.getResultSet();
+                exists.set(rs.next());
+            }
+        }, enumName);
+        if (exists.get()) {
+            return;
+        }
+        String enumValues = values.stream().map(v -> "'" + v + "'").collect(Collectors.joining(", "));
+        String query = "CREATE TYPE " + enumName + " AS ENUM (" + enumValues + ")";
+        executeQuery(query);
     }
 
     public String getDriver() {
