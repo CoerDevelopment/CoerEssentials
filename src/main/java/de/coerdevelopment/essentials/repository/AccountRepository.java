@@ -4,7 +4,12 @@ import de.coerdevelopment.essentials.api.Account;
 import de.coerdevelopment.essentials.security.CoerSecurity;
 
 import javax.money.Monetary;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -20,38 +25,38 @@ public class AccountRepository extends Repository {
     @Override
     public void createTable() {
         SQLTable table = new SQLTable(tableName);
-        table.addAutoKey("accountId");
+        table.addAutoKey("account_id");
         table.addUniqueString("mail", 128, false);
         table.addString("password", 64, false);
         table.addString("salt", 64, false);
-        table.addDateTime("createdDate", false);
-        table.addBooleanWithDefault("isLocked", false);
+        table.addDateTimeWithTimezone("created_at", false);
+        table.addBooleanWithDefault("is_locked", false);
         table.addDate("birthday", true);
-        table.addString("firstName", 64, true);
-        table.addString("lastName", 64, true);
+        table.addString("first_name", 64, true);
+        table.addString("last_name", 64, true);
         table.addString("username", 32, true);
         table.addString("nationality", 64, true);
         table.addString("location", 64, true);
         table.addString("locale", 20, false);
-        table.addString("preferredCurrency", 3, false);
-        table.addString("instagramUrl", 128, true);
-        table.addString("twitterUrl", 128, true);
-        table.addString("facebookUrl", 128, true);
-        table.addString("linkedInUrl", 128, true);
-        table.addString("websiteUrl", 128, true);
-        table.addString("aboutMe", 256, true);
-        table.addString("profilePictureUrl", 256, true);
-        table.addBooleanWithDefault("isPrivate", false);
-        table.addBooleanWithDefault("mailVerified", false);
-        table.addString("mailVerificationCode", 64, true);
-        table.addLong("mailVerificationCodeExpiration", true);
+        table.addString("preferred_currency", 3, false);
+        table.addString("instagram_url", 128, true);
+        table.addString("twitter_url", 128, true);
+        table.addString("facebook_url", 128, true);
+        table.addString("linked_in_url", 128, true);
+        table.addString("website_url", 128, true);
+        table.addString("about_me", 256, true);
+        table.addString("profile_picture_url", 256, true);
+        table.addBooleanWithDefault("is_private", false);
+        table.addBooleanWithDefault("mail_verified", false);
+        table.addString("mail_verification_code", 64, true);
+        table.addLong("mail_verification_code_expiration", true);
         sql.executeQuery(table.getCreateTableStatement());
 
     }
 
     public int insertAccount(String mail, String password, String salt, Locale locale) {
         AtomicInteger accountId = new AtomicInteger(-1);
-        PreparedStatement statement = sql.executeQueryReturningKeys("INSERT INTO " + tableName + " (mail, password, salt, createdDate, locale, preferredCurrency) VALUES (?, ?, ?, ?, ?, ?)", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQueryReturningKeys("INSERT INTO " + tableName + " (mail, password, salt, created_at, locale, preferred_currency) VALUES (?, ?, ?, ?, ?, ?)", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getGeneratedKeys();
@@ -59,18 +64,18 @@ public class AccountRepository extends Repository {
                     accountId.set(rs.getInt(1));
                 }
             }
-        }, mail, password, salt, new Timestamp(System.currentTimeMillis()), locale.toLanguageTag(), Monetary.getCurrency(locale).getCurrencyCode());
+        }, mail, password, salt, OffsetDateTime.now(), locale.toLanguageTag(), Monetary.getCurrency(locale).getCurrencyCode());
         return accountId.get();
     }
 
     public int getAccountIdByMail(String mail) {
         AtomicInteger accountId = new AtomicInteger(-1);
-        PreparedStatement statement = sql.executeQuery("SELECT accountId FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT account_id FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    accountId.set(rs.getInt("accountId"));
+                    accountId.set(rs.getInt("account_id"));
                 }
             }
         }, mail);
@@ -79,7 +84,7 @@ public class AccountRepository extends Repository {
 
     public boolean doesMailExists(String mail) {
         AtomicBoolean exists = new AtomicBoolean(false);
-        PreparedStatement statement = sql.executeQuery("SELECT accountId FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT account_id FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
@@ -91,7 +96,7 @@ public class AccountRepository extends Repository {
 
     public String getMail(int accountId) {
         AtomicReference<String> mail = new AtomicReference<>();
-        PreparedStatement statement = sql.executeQuery("SELECT mail FROM " + tableName + " WHERE accountId = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT mail FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
@@ -105,12 +110,12 @@ public class AccountRepository extends Repository {
 
     public boolean isMailVerified(int accountId) {
         AtomicBoolean verified = new AtomicBoolean(false);
-        PreparedStatement statement = sql.executeQuery("SELECT mailVerified FROM " + tableName + " WHERE accountId = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT mail_verified FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    verified.set(rs.getBoolean("mailVerified"));
+                    verified.set(rs.getBoolean("mail_verified"));
                 }
             }
         }, accountId);
@@ -118,23 +123,23 @@ public class AccountRepository extends Repository {
     }
 
     public void setMailVerified(int accountId) {
-        sql.executeQuery("UPDATE " + tableName + " SET mailVerified = ?, mailVerificationCode = null, mailVerificationCodeExpiration = null  WHERE accountId = ?", true, accountId);
+        sql.executeQuery("UPDATE " + tableName + " SET mail_verified = ?, mail_verification_code = null, mail_verification_code_expiration = null  WHERE account_id = ?", true, accountId);
     }
 
     public void setMailVerificationCode(int accountId, String mailVerificationCode, long mailVerificationCodeExpiration) {
-        sql.executeQuery("UPDATE " + tableName + " SET mailVerificationCode = ?, mailVerificationCodeExpiration = ? WHERE accountId = ?", mailVerificationCode, mailVerificationCodeExpiration, accountId);
+        sql.executeQuery("UPDATE " + tableName + " SET mail_verification_code = ?, mail_verification_code_expiration = ? WHERE account_id = ?", mailVerificationCode, mailVerificationCodeExpiration, accountId);
     }
 
     public boolean doesMailVerificationCodeMatch(int accountId, String mailVerificationCode) throws Exception {
         AtomicBoolean verified = new AtomicBoolean(false);
         AtomicBoolean expired = new AtomicBoolean(false);
-        PreparedStatement statement = sql.executeQuery("SELECT mailVerificationCode, mailVerificationCodeExpiration FROM " + tableName + " WHERE accountId = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT mail_verification_code, mail_verification_code_expiration FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    String dbMailVerificationCode = rs.getString("mailVerificationCode");
-                    long dbMailVerificationCodeExpiration = rs.getLong("mailVerificationCodeExpiration");
+                    String dbMailVerificationCode = rs.getString("mail_verification_code");
+                    long dbMailVerificationCodeExpiration = rs.getLong("mail_verification_code_expiration");
                     if (System.currentTimeMillis() > dbMailVerificationCodeExpiration) {
                         expired.set(true);
                         return;
@@ -151,12 +156,12 @@ public class AccountRepository extends Repository {
 
     public boolean isMailVerificationPending(int accountId) {
         AtomicBoolean verified = new AtomicBoolean(false);
-        PreparedStatement statement = sql.executeQuery("SELECT mailVerificationCodeExpiration FROM " + tableName + " WHERE accountId = ? AND mailVerified = false", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT mail_verification_code_expiration FROM " + tableName + " WHERE account_id = ? AND mail_verified = false", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    verified.set(rs.getLong("mailVerificationCodeExpiration") > System.currentTimeMillis());
+                    verified.set(rs.getLong("mail_verification_code_expiration") > System.currentTimeMillis());
                 }
             }
         }, accountId);
@@ -171,7 +176,7 @@ public class AccountRepository extends Repository {
         AtomicBoolean matches = new AtomicBoolean(false);
         AtomicBoolean accountExists = new AtomicBoolean(false);
         AtomicInteger accountId = new AtomicInteger(-1);
-        PreparedStatement statement = sql.executeQuery("SELECT accountId, password, salt FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT account_id, password, salt FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
@@ -182,7 +187,7 @@ public class AccountRepository extends Repository {
                     String hashedPassword = CoerSecurity.getInstance().hashPassword(password, dbSalt);
                     if (dbPassword.equals(hashedPassword)) {
                         matches.set(true);
-                        accountId.set(rs.getInt("accountId"));
+                        accountId.set(rs.getInt("account_id"));
                     }
                 }
             }
@@ -197,15 +202,15 @@ public class AccountRepository extends Repository {
     }
 
     public void changePassword(int accountId, String password, String salt) {
-        sql.executeQuery("UPDATE " + tableName + " SET password = ?, salt = ? WHERE accountId = ?", password, salt, accountId);
+        sql.executeQuery("UPDATE " + tableName + " SET password = ?, salt = ? WHERE account_id = ?", password, salt, accountId);
     }
 
     public boolean updateAccount(int accountId, Account account) {
         try (Connection connection = sql.getConnection()) {
             PreparedStatement ps = connection.prepareStatement("UPDATE " + tableName + " SET " +
-                    "birthday = ?, firstName = ?, lastName = ?, username = ?, nationality = ?, location = ?, locale = ?, preferredCurrency = ?, instagramUrl = ?, twitterUrl = ?, facebookUrl = ?, linkedInUrl = ?, websiteUrl = ?, aboutMe = ?, profilePictureUrl = ?, isPrivate = ? WHERE accountId = ?");
+                    "birthday = ?, first_name = ?, last_name = ?, username = ?, nationality = ?, location = ?, locale = ?, preferred_currency = ?, instagram_url = ?, twitter_url = ?, facebook_url = ?, linked_in_url = ?, website_url = ?, about_me = ?, profile_picture_url = ?, is_private = ? WHERE account_id = ?");
             int index = 1;
-            ps.setDate(index++, account.birthday != null ? new Date(account.birthday.getTime()) : null);
+            ps.setObject(index++, account.birthday);
             ps.setString(index++, account.firstName);
             ps.setString(index++, account.lastName);
             ps.setString(index++, account.username);
@@ -229,7 +234,7 @@ public class AccountRepository extends Repository {
     }
 
     public void setProperty(int accountId, String property, Object value) {
-        sql.executeQuery("UPDATE " + tableName + " SET " + property + " = ? WHERE accountId = ?", value, accountId);
+        sql.executeQuery("UPDATE " + tableName + " SET " + property + " = ? WHERE account_id = ?", value, accountId);
     }
 
     public Map<Integer, Account> getAllAccountsById() {
@@ -239,7 +244,7 @@ public class AccountRepository extends Repository {
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 while (rs.next()) {
-                    accounts.put(rs.getInt("accountId"), getColumnMapper().getObjectFromResultSetEntry(rs));
+                    accounts.put(rs.getInt("account_id"), getColumnMapper().getObjectFromResultSetEntry(rs));
                 }
             }
         });
@@ -248,7 +253,7 @@ public class AccountRepository extends Repository {
 
     public Account getAccount(int accountId) {
         AtomicReference<Account> account = new AtomicReference<>();
-        sql.executeQuery("SELECT * FROM " + tableName + " WHERE accountId = ?", new StatementCustomAction() {
+        sql.executeQuery("SELECT * FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
@@ -262,7 +267,7 @@ public class AccountRepository extends Repository {
 
     public boolean deleteAccount(int accountId) {
         AtomicBoolean deleted = new AtomicBoolean(false);
-        sql.executeQuery("DELETE FROM " + tableName + " WHERE accountId = ?", new StatementCustomAction() {
+        sql.executeQuery("DELETE FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 deleted.set(statement.getUpdateCount() > 0);
@@ -276,27 +281,27 @@ public class AccountRepository extends Repository {
             @Override
             public Account getObjectFromResultSetEntry(ResultSet resultSet) throws SQLException {
                 return new Account(
-                        resultSet.getInt("accountId"),
+                        resultSet.getInt("account_id"),
                         resultSet.getString("mail"),
-                        resultSet.getDate("createdDate"),
-                        resultSet.getDate("birthday"),
-                        resultSet.getString("firstName"),
-                        resultSet.getString("lastName"),
+                        resultSet.getObject("created_at", OffsetDateTime.class),
+                        resultSet.getObject("birthday", LocalDate.class),
+                        resultSet.getString("first_name"),
+                        resultSet.getString("last_name"),
                         resultSet.getString("username"),
                         resultSet.getString("nationality"),
                         resultSet.getString("location"),
                         Locale.forLanguageTag(resultSet.getString("locale")),
-                        Monetary.getCurrency(resultSet.getString("preferredCurrency")),
-                        resultSet.getString("instagramUrl"),
-                        resultSet.getString("twitterUrl"),
-                        resultSet.getString("facebookUrl"),
-                        resultSet.getString("linkedInUrl"),
-                        resultSet.getString("websiteUrl"),
-                        resultSet.getString("aboutMe"),
-                        resultSet.getString("profilePictureUrl"),
-                        resultSet.getBoolean("isPrivate"),
-                        resultSet.getBoolean("isLocked"),
-                        resultSet.getBoolean("mailVerified")
+                        Monetary.getCurrency(resultSet.getString("preferred_currency")),
+                        resultSet.getString("instagram_url"),
+                        resultSet.getString("twitter_url"),
+                        resultSet.getString("facebook_url"),
+                        resultSet.getString("linked_in_url"),
+                        resultSet.getString("website_url"),
+                        resultSet.getString("about_me"),
+                        resultSet.getString("profile_picture_url"),
+                        resultSet.getBoolean("is_private"),
+                        resultSet.getBoolean("is_locked"),
+                        resultSet.getBoolean("mail_verified")
                 );
             }
         };

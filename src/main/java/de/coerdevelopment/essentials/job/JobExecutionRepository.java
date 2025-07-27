@@ -2,9 +2,8 @@ package de.coerdevelopment.essentials.job;
 
 import com.google.gson.Gson;
 import de.coerdevelopment.essentials.repository.*;
-import org.postgresql.util.PGobject;
 
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 public class JobExecutionRepository extends Repository {
@@ -19,14 +18,14 @@ public class JobExecutionRepository extends Repository {
     }
 
     private JobExecutionRepository() {
-        super("JobExecutionLog");
+        super("job_executions");
     }
 
     @Override
     public void createTable() {
         SQLTable table = new SQLTable(tableName);
-        table.addAutoKey("id");
-        table.addString("executionId", 120, false);
+        table.addAutoKey("job_id");
+        table.addString("execution_uuid", 120, false);
         table.addString("name", 120, false);
         SQLEntity options = new SQLEntity("options", "JSONB", true);
         table.addEntity(options);
@@ -34,19 +33,19 @@ public class JobExecutionRepository extends Repository {
         table.addEntity(data);
         SQLEntity stacktrace = new SQLEntity("stacktrace", "TEXT", true);
         table.addEntity(stacktrace);
-        table.addDateTime("startTime", false);
-        table.addDateTime("endTime", true);
+        table.addDateTimeWithTimezone("started_at", false);
+        table.addDateTimeWithTimezone("ended_at", true);
         table.addLong("duration", false);
-        table.addDateTime("logTime", false);
+        table.addDateTimeWithTimezone("logged_at", false);
         sql.executeQuery(table.getCreateTableStatement());
         // add index
-        sql.executeQuery("CREATE INDEX IF NOT EXISTS idx_job_log_execution_id ON " + tableName + " (executionId);");
+        sql.executeQuery("CREATE INDEX IF NOT EXISTS idx_job_log_execution_uuid ON " + tableName + " (execution_uuid);");
         sql.executeQuery("CREATE INDEX IF NOT EXISTS idx_job_log_name ON " + tableName + " (name);");
 
     }
 
     public void insertLog(JobExecution jobExecution) {
-        String query = "INSERT INTO " + tableName + " (executionId, name, options, data, stacktrace, startTime, endTime, duration, logTime) " +
+        String query = "INSERT INTO " + tableName + " (execution_uuid, name, options, data, stacktrace, started_at, ended_at, duration, logged_at) " +
                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         String optionsJson = new Gson().toJson(jobExecution.options);
         sql.executeQuery(query, jobExecution.uuid.toString(),
@@ -54,32 +53,24 @@ public class JobExecutionRepository extends Repository {
                 SQLUtil.getJsonPgObject(optionsJson),
                 jobExecution.data,
                 jobExecution.stackTrace,
-                jobExecution.startTime,
-                jobExecution.endTime,
+                jobExecution.startetAt,
+                jobExecution.endedAt,
                 jobExecution.duration,
-                new Timestamp(System.currentTimeMillis()));
+                OffsetDateTime.now());
     }
 
     private final ColumnMapper<JobExecution> columnMapper = new ColumnMapper<JobExecution>() {
         @Override
         public Map<String, Object> mapColumns(JobExecution obj) {
-            PGobject optionsObject = new PGobject();
-            optionsObject.setType("jsonb");
-            try {
-                Gson gson = new Gson();
-                optionsObject.setValue(gson.toJson(obj.options));
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to convert JobOptions to JSON: " + e.getMessage(), e);
-            }
-            return Map.of("executionId", obj.uuid.toString(),
+            return Map.of("execution_uuid", obj.uuid.toString(),
                           "name", obj.job.getName(),
-                          "options", optionsObject,
+                          "options", SQLUtil.getJsonPgObject(new Gson().toJson(obj.options)),
                           "data", obj.data,
                           "stacktrace", obj.stackTrace,
-                          "startTime", obj.startTime,
-                          "endTime", obj.endTime,
+                          "started_at", obj.startetAt,
+                          "ended_at", obj.endedAt,
                           "duration", obj.duration,
-                        "logTime", new Timestamp(System.currentTimeMillis()));
+                        "logged_at", OffsetDateTime.now());
         }
     };
 

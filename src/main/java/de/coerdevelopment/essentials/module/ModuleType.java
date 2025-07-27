@@ -38,7 +38,7 @@ public enum ModuleType {
 
     private static Map<String, Object> getAccountOptions() {
         Map<String, Object> options = new HashMap<>();
-        options.put("tableName", "Account");
+        options.put("tableName", "accounts");
         options.put("saltLength", 16);
         options.put("hashAlgorithm", "SHA-256");
         options.put("mailConfirmationEnabled", true);

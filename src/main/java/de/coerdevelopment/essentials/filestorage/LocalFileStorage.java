@@ -12,7 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -43,11 +43,12 @@ public class LocalFileStorage extends FileStorage {
         String uniqueFileName = UUID.randomUUID() + "." + extension;
         Path destinationPath = storageDirectory.resolve(uniqueFileName);
 
-        FileMetadata fileMetadata = new FileMetadata(accountId, fileName, file, storageDirectory.toFile().getAbsolutePath().toString(), uniqueFileName, new Timestamp(System.currentTimeMillis()));
+        FileMetadata fileMetadata = new FileMetadata(accountId, fileName, file, storageDirectory.toFile().getAbsolutePath().toString(), uniqueFileName, OffsetDateTime.now());
 
         try {
             LocalFileStorageRepository.getInstance().insertFileMetadata(Arrays.asList(fileMetadata));
         } catch (SQLException e) {
+            e.printStackTrace();
             throw new IOException("File already exists");
         }
 

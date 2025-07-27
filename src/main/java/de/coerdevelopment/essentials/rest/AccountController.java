@@ -15,8 +15,8 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -55,8 +55,13 @@ public class AccountController {
 
     @AuthentificationRequired
     @PutMapping()
-    public ResponseEntity<Boolean> updateAccount(@RequestAttribute("accountId") int accountId, @RequestBody Account account) {
-        return ResponseEntity.ok(getAccountModule().updateAccount(accountId, account));
+    public ResponseEntity updateAccount(@RequestAttribute("accountId") int accountId, @RequestBody Account account) {
+        try {
+            Account updatedAccount = getAccountModule().updateAccount(accountId, account);
+            return ResponseEntity.ok(updatedAccount);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @AuthentificationRequired
@@ -79,15 +84,15 @@ public class AccountController {
             accountId = getAccountModule().login(request.mail, request.password);
         } catch (Exception e) {
             CoerEssentials.getInstance().logError(e.getMessage());
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), false, e.getMessage()));
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, OffsetDateTime.now(), false, e.getMessage()));
         }
         Account account = getAccountModule().getAccount(accountId);
         if (account != null && account.isLocked) {
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), false, "Account is locked"));
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, OffsetDateTime.now(), false, "Account is locked"));
             return ResponseEntity.status(HttpStatus.LOCKED).body("Account is locked");
         }
         if (account != null) {
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), accountId != -1, ""));
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, OffsetDateTime.now(), accountId != -1, ""));
             final long TOKEN_EXPIRATION = getAccountModule().refreshTokenExpiration;
             String refreshToken = CoerSecurity.getInstance().createToken(accountId, TOKEN_EXPIRATION);
             ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
@@ -116,7 +121,7 @@ public class AccountController {
                 }
             }, LOCK_DURATION_SECONDS, TimeUnit.SECONDS);
 
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, new Timestamp(System.currentTimeMillis()), false, "Invalid credentials"));
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.mail, OffsetDateTime.now(), false, "Invalid credentials"));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
     }

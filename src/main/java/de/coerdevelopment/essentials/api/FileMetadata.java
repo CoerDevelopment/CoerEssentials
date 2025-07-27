@@ -2,7 +2,7 @@ package de.coerdevelopment.essentials.api;
 
 import org.springframework.web.multipart.MultipartFile;
 
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 
 public class FileMetadata {
 
@@ -13,9 +13,9 @@ public class FileMetadata {
     public String mimeType;
     public long fileSizeBytes;
     public int accountId;
-    public Timestamp createdAt;
+    public OffsetDateTime createdAt;
 
-    public FileMetadata(int fileId, String fileName, String storagePath, String storedFileName, String mimeType, long fileSizeBytes, int accountId, Timestamp createdAt) {
+    public FileMetadata(int fileId, String fileName, String storagePath, String storedFileName, String mimeType, long fileSizeBytes, int accountId, OffsetDateTime createdAt) {
         this.fileId = fileId;
         this.fileName = fileName;
         this.storagePath = storagePath;
@@ -26,7 +26,7 @@ public class FileMetadata {
         this.createdAt = createdAt;
     }
 
-    public FileMetadata(int accountId, String fileName, MultipartFile file, String storagePath, String storedFileName, Timestamp createdAt) {
+    public FileMetadata(int accountId, String fileName, MultipartFile file, String storagePath, String storedFileName, OffsetDateTime createdAt) {
         this.fileName = fileName;
         this.storagePath = storagePath;
         this.storedFileName = storedFileName;

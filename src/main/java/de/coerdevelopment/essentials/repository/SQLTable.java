@@ -92,6 +92,10 @@ public class SQLTable {
         addEntity(name, "TIMESTAMP", nullable);
     }
 
+    public void addDateTimeWithTimezone(String name, boolean nullable) {
+        addEntity(name, "TIMESTAMPTZ", nullable);
+    }
+
     public void addDouble(String name, int length, int digits, boolean nullable) {
         addEntity(name, "DECIMAL(" + length + "," + digits + ")", nullable);
     }

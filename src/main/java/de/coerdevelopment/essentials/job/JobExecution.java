@@ -4,7 +4,7 @@ import de.coerdevelopment.essentials.CoerEssentials;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
@@ -15,8 +15,8 @@ public class JobExecution {
     public JobOptions options;
     public String data;
     public String stackTrace;
-    public Timestamp startTime;
-    public Timestamp endTime;
+    public OffsetDateTime startetAt;
+    public OffsetDateTime endedAt;
     public long duration;
 
     public JobExecution(Job job, JobOptions options) {
@@ -47,7 +47,7 @@ public class JobExecution {
     }
 
     private void executeJob() {
-        startTime = new Timestamp(System.currentTimeMillis());
+        startetAt = OffsetDateTime.now();
         try {
             job.before(this);
             job.execute(this);
@@ -60,8 +60,8 @@ public class JobExecution {
             stackTrace = sw.toString();
             throw e;
         } finally {
-            endTime = new Timestamp(System.currentTimeMillis());
-            duration = ChronoUnit.MILLIS.between(startTime.toInstant(), endTime.toInstant());
+            endedAt = OffsetDateTime.now();
+            duration = ChronoUnit.MILLIS.between(startetAt.toInstant(), endedAt.toInstant());
             if (CoerEssentials.getInstance().getSQLModule() != null) {
                 JobExecutionRepository.getInstance().insertLog(this);
             }

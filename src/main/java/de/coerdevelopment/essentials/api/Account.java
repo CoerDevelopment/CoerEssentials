@@ -7,16 +7,16 @@ import de.coerdevelopment.essentials.utils.CurrencyUnitSerializer;
 
 import javax.money.CurrencyUnit;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.Period;
-import java.util.Date;
 import java.util.Locale;
 
 public class Account {
 
     public int accountId;
     public String mail;
-    public Date createdDate;
-    public Date birthday;
+    public OffsetDateTime createdAt;
+    public LocalDate birthday;
     public int age;
     public String firstName;
     public String lastName;
@@ -41,10 +41,10 @@ public class Account {
     public Account() {
     }
 
-    public Account(int accountId, String mail, Date createdDate, Date birthday, String firstName, String lastName, String username, String nationality, String location, Locale locale, CurrencyUnit preferredCurrency, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
+    public Account(int accountId, String mail, OffsetDateTime createdAt, LocalDate birthday, String firstName, String lastName, String username, String nationality, String location, Locale locale, CurrencyUnit preferredCurrency, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
         this.accountId = accountId;
         this.mail = mail;
-        this.createdDate = createdDate;
+        this.createdAt = createdAt;
         this.birthday = birthday;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -68,10 +68,7 @@ public class Account {
 
     private void calcAge() {
         if (birthday != null) {
-            LocalDate birthdate = new java.sql.Date(birthday.getTime()).toLocalDate();
-            LocalDate now = LocalDate.now();
-            Period between = Period.between(birthdate, now);
-            age = between.getYears();
+            age = Period.between(birthday, LocalDate.now()).getYears();
         }
     }
 }

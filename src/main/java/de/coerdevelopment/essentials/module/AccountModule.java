@@ -18,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Date;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,7 +35,7 @@ public class AccountModule extends Module {
     private List<String> blacklistedRefreshTokens;
 
     // Options
-    private String tableName;
+    public String tableName;
     private int saltLength;
     private String hashAlgorithm;
     private boolean mailConfirmationEnabled;
@@ -154,7 +154,7 @@ public class AccountModule extends Module {
         claims.put("accountId", account.accountId);
         claims.put("mail", account.mail);
         claims.put("username", account.username);
-        claims.put("createdDate", account.createdDate);
+        claims.put("createdAt", account.createdAt.toString());
         claims.put("locale", account.locale.toLanguageTag());
         claims.put("defaultCurrency", account.preferredCurrency.getCurrencyCode());
         claims.put("mailVerified", account.mailVerified);
@@ -300,12 +300,12 @@ public class AccountModule extends Module {
     }
 
     public void lockAccount(int accountId) {
-        accountRepository.setProperty(accountId, "isLocked", true);
+        accountRepository.setProperty(accountId, "is_locked", true);
         accountsById.get(accountId).isLocked = true;
     }
 
     public void unlockAccount(int accountId) {
-        accountRepository.setProperty(accountId, "isLocked", false);
+        accountRepository.setProperty(accountId, "is_locked", false);
         accountsById.get(accountId).isLocked = false;
     }
 
@@ -321,19 +321,26 @@ public class AccountModule extends Module {
         return profilePictureStorage.load(targetAccountId, "profilePicture");
     }
 
-    public boolean updateAccount(int accountId, Account account) {
+    public Account updateAccount(int accountId, Account account)throws Exception {
         Account currentState = getAccount(accountId);
         if (currentState.isLocked != account.isLocked) {
-            return false;
+            throw new Exception("Unable to change lock status");
         }
-        accountsById.put(accountId, account);
-        return accountRepository.updateAccount(accountId, account);
+
+        boolean success = accountRepository.updateAccount(accountId, account);
+        if(success) {
+            Account updatedAccount = accountRepository.getAccount(accountId);
+            accountsById.put(accountId, updatedAccount);
+            return updatedAccount;
+        } else {
+            throw new Exception("Unable to update account");
+        }
     }
 
     /**
      * Sets the birthday of the account
      */
-    public void setBirthday(int accountId, Date birthday) {
+    public void setBirthday(int accountId, LocalDate birthday) {
         accountRepository.setProperty(accountId, "birthday", birthday);
     }
 
@@ -341,14 +348,14 @@ public class AccountModule extends Module {
      * Sets the first name of the account
      */
     public void setFirstName(int accountId, String firstName) {
-        accountRepository.setProperty(accountId, "firstName", firstName);
+        accountRepository.setProperty(accountId, "first_name", firstName);
     }
 
     /**
      * Sets the last name of the account
      */
     public void setLastName(int accountId, String lastName) {
-        accountRepository.setProperty(accountId, "lastName", lastName);
+        accountRepository.setProperty(accountId, "last_name", lastName);
     }
 
     /**
@@ -376,53 +383,53 @@ public class AccountModule extends Module {
      * Sets the instagram Url of the account
      */
     public void setInstagramUrl(int accountId, String instagramUrl) {
-        accountRepository.setProperty(accountId, "instagramUrl", instagramUrl);
+        accountRepository.setProperty(accountId, "instagram_url", instagramUrl);
     }
 
     /**
      * Sets the twitter Url of the account
      */
     public void setTwitterUrl(int accountId, String twitterUrl) {
-        accountRepository.setProperty(accountId, "twitterUrl", twitterUrl);
+        accountRepository.setProperty(accountId, "twitter_url", twitterUrl);
     }
 
     /**
      * Sets the facebook Url of the account
      */
     public void setFacebookUrl(int accountId, String facebookUrl) {
-        accountRepository.setProperty(accountId, "facebookUrl", facebookUrl);
+        accountRepository.setProperty(accountId, "facebook_url", facebookUrl);
     }
 
     /**
      * Sets the linkedin Url of the account
      */
     public void setLinkedinUrl(int accountId, String linkedinUrl) {
-        accountRepository.setProperty(accountId, "linkedinUrl", linkedinUrl);
+        accountRepository.setProperty(accountId, "linked_in_url", linkedinUrl);
     }
 
     /**
      * Sets the website Url of the account
      */
     public void setWebsiteUrl(int accountId, String websiteUrl) {
-        accountRepository.setProperty(accountId, "websiteUrl", websiteUrl);
+        accountRepository.setProperty(accountId, "website_url", websiteUrl);
     }
 
     /**
      * Sets the about me text of the account
      */
     public void setAboutMe(int accountId, String aboutMe) {
-        accountRepository.setProperty(accountId, "aboutMe", aboutMe);
+        accountRepository.setProperty(accountId, "about_me", aboutMe);
     }
 
     /**
      * Sets the profile picture Url of the account
      */
     public void setProfilePictureUrl(int accountId, String profilePictureUrl) {
-        accountRepository.setProperty(accountId, "profilePictureUrl", profilePictureUrl);
+        accountRepository.setProperty(accountId, "profile_picture_url", profilePictureUrl);
     }
 
     public void setPrivateStatus(int accountId, boolean isPrivate) {
-        accountRepository.setProperty(accountId, "isPrivate", isPrivate);
+        accountRepository.setProperty(accountId, "is_private", isPrivate);
     }
 
     /**

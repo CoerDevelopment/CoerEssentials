@@ -1,23 +1,23 @@
 package de.coerdevelopment.essentials.api;
 
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 
 public class AccountLogin {
 
     public int loginId;
     public String mail;
-    public Timestamp timestamp;
+    public OffsetDateTime loginAt;
     public boolean success;
     public String failureReason;
 
-    public AccountLogin(int loginId, String mail, Timestamp timestamp, boolean success, String failureReason) {
-        this(mail, timestamp, success, failureReason);
+    public AccountLogin(int loginId, String mail, OffsetDateTime loginAt, boolean success, String failureReason) {
+        this(mail, loginAt, success, failureReason);
         this.loginId = loginId;
     }
 
-    public AccountLogin(String mail, Timestamp timestamp, boolean success, String failureReason) {
+    public AccountLogin(String mail, OffsetDateTime loginAt, boolean success, String failureReason) {
         this.mail = mail;
-        this.timestamp = timestamp;
+        this.loginAt = loginAt;
         this.success = success;
         this.failureReason = failureReason;
     }
