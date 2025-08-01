@@ -26,7 +26,7 @@ public class AccountRepository extends Repository {
     public void createTable() {
         SQLTable table = new SQLTable(tableName);
         table.addAutoKey("account_id");
-        table.addUniqueString("mail", 128, false);
+        table.addUniqueString("email", 256, false);
         table.addString("password", 64, false);
         table.addString("salt", 64, false);
         table.addDateTimeWithTimezone("created_at", false);
@@ -35,6 +35,7 @@ public class AccountRepository extends Repository {
         table.addString("first_name", 64, true);
         table.addString("last_name", 64, true);
         table.addString("username", 32, true);
+        table.addString("phone_number", 32, true);
         table.addString("nationality", 64, true);
         table.addString("location", 64, true);
         table.addString("locale", 20, false);
@@ -47,16 +48,17 @@ public class AccountRepository extends Repository {
         table.addString("about_me", 256, true);
         table.addString("profile_picture_url", 256, true);
         table.addBooleanWithDefault("is_private", false);
-        table.addBooleanWithDefault("mail_verified", false);
-        table.addString("mail_verification_code", 64, true);
-        table.addLong("mail_verification_code_expiration", true);
+        table.addBooleanWithDefault("email_verified", false);
+        table.addString("email_verification_code", 64, true);
+        table.addLong("email_verification_code_expiration", true);
+        table.addCheck("email = LOWER(email)");
+        table.addCheck("email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'");
         sql.executeQuery(table.getCreateTableStatement());
-
     }
 
-    public int insertAccount(String mail, String password, String salt, Locale locale) {
+    public int insertAccount(String email, String password, String salt, Locale locale) {
         AtomicInteger accountId = new AtomicInteger(-1);
-        PreparedStatement statement = sql.executeQueryReturningKeys("INSERT INTO " + tableName + " (mail, password, salt, created_at, locale, preferred_currency) VALUES (?, ?, ?, ?, ?, ?)", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQueryReturningKeys("INSERT INTO " + tableName + " (email, password, salt, created_at, locale, preferred_currency) VALUES (?, ?, ?, ?, ?, ?)", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getGeneratedKeys();
@@ -64,13 +66,13 @@ public class AccountRepository extends Repository {
                     accountId.set(rs.getInt(1));
                 }
             }
-        }, mail, password, salt, OffsetDateTime.now(), locale.toLanguageTag(), Monetary.getCurrency(locale).getCurrencyCode());
+        }, email, password, salt, OffsetDateTime.now(), locale.toLanguageTag(), Monetary.getCurrency(locale).getCurrencyCode());
         return accountId.get();
     }
 
-    public int getAccountIdByMail(String mail) {
+    public int getAccountIdByEmail(String email) {
         AtomicInteger accountId = new AtomicInteger(-1);
-        PreparedStatement statement = sql.executeQuery("SELECT account_id FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT account_id FROM " + tableName + " WHERE email = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
@@ -78,90 +80,90 @@ public class AccountRepository extends Repository {
                     accountId.set(rs.getInt("account_id"));
                 }
             }
-        }, mail);
+        }, email);
         return accountId.get();
     }
 
-    public boolean doesMailExists(String mail) {
+    public boolean doesEmailExists(String email) {
         AtomicBoolean exists = new AtomicBoolean(false);
-        PreparedStatement statement = sql.executeQuery("SELECT account_id FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT account_id FROM " + tableName + " WHERE email = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 exists.set(rs.next());
             }
-        }, mail);
+        }, email);
         return exists.get();
     }
 
-    public String getMail(int accountId) {
-        AtomicReference<String> mail = new AtomicReference<>();
-        PreparedStatement statement = sql.executeQuery("SELECT mail FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
+    public String getEmail(int accountId) {
+        AtomicReference<String> email = new AtomicReference<>();
+        PreparedStatement statement = sql.executeQuery("SELECT email FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    mail.set(rs.getString("mail"));
+                    email.set(rs.getString("email"));
                 }
             }
         }, accountId);
-        return mail.get();
+        return email.get();
     }
 
-    public boolean isMailVerified(int accountId) {
+    public boolean isEmailVerified(int accountId) {
         AtomicBoolean verified = new AtomicBoolean(false);
-        PreparedStatement statement = sql.executeQuery("SELECT mail_verified FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT email_verified FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    verified.set(rs.getBoolean("mail_verified"));
+                    verified.set(rs.getBoolean("email_verified"));
                 }
             }
         }, accountId);
         return verified.get();
     }
 
-    public void setMailVerified(int accountId) {
-        sql.executeQuery("UPDATE " + tableName + " SET mail_verified = ?, mail_verification_code = null, mail_verification_code_expiration = null  WHERE account_id = ?", true, accountId);
+    public void setEmailVerified(int accountId) {
+        sql.executeQuery("UPDATE " + tableName + " SET email_verified = ?, email_verification_code = null, email_verification_code_expiration = null  WHERE account_id = ?", true, accountId);
     }
 
-    public void setMailVerificationCode(int accountId, String mailVerificationCode, long mailVerificationCodeExpiration) {
-        sql.executeQuery("UPDATE " + tableName + " SET mail_verification_code = ?, mail_verification_code_expiration = ? WHERE account_id = ?", mailVerificationCode, mailVerificationCodeExpiration, accountId);
+    public void setEmailVerificationCode(int accountId, String emailVerificationCode, long emailVerificationCodeExpiration) {
+        sql.executeQuery("UPDATE " + tableName + " SET email_verification_code = ?, email_verification_code_expiration = ? WHERE account_id = ?", emailVerificationCode, emailVerificationCodeExpiration, accountId);
     }
 
-    public boolean doesMailVerificationCodeMatch(int accountId, String mailVerificationCode) throws Exception {
+    public boolean doesEmailVerificationCodeMatch(int accountId, String emailVerificationCode) throws Exception {
         AtomicBoolean verified = new AtomicBoolean(false);
         AtomicBoolean expired = new AtomicBoolean(false);
-        PreparedStatement statement = sql.executeQuery("SELECT mail_verification_code, mail_verification_code_expiration FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT email_verification_code, email_verification_code_expiration FROM " + tableName + " WHERE account_id = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    String dbMailVerificationCode = rs.getString("mail_verification_code");
-                    long dbMailVerificationCodeExpiration = rs.getLong("mail_verification_code_expiration");
-                    if (System.currentTimeMillis() > dbMailVerificationCodeExpiration) {
+                    String dbEmailVerificationCode = rs.getString("email_verification_code");
+                    long dbEmailVerificationCodeExpiration = rs.getLong("email_verification_code_expiration");
+                    if (System.currentTimeMillis() > dbEmailVerificationCodeExpiration) {
                         expired.set(true);
                         return;
                     }
-                    verified.set(dbMailVerificationCode.equals(mailVerificationCode));
+                    verified.set(dbEmailVerificationCode.equals(emailVerificationCode));
                 }
             }
         }, accountId);
         if (expired.get()) {
-            throw new Exception("Mail verification code expired");
+            throw new Exception("Email verification code expired");
         }
         return verified.get();
     }
 
-    public boolean isMailVerificationPending(int accountId) {
+    public boolean isEmailVerificationPending(int accountId) {
         AtomicBoolean verified = new AtomicBoolean(false);
-        PreparedStatement statement = sql.executeQuery("SELECT mail_verification_code_expiration FROM " + tableName + " WHERE account_id = ? AND mail_verified = false", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT email_verification_code_expiration FROM " + tableName + " WHERE account_id = ? AND email_verified = false", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
                 if (rs.next()) {
-                    verified.set(rs.getLong("mail_verification_code_expiration") > System.currentTimeMillis());
+                    verified.set(rs.getLong("email_verification_code_expiration") > System.currentTimeMillis());
                 }
             }
         }, accountId);
@@ -172,11 +174,11 @@ public class AccountRepository extends Repository {
      * Checks if the given credentials are correct and returns the accountId if they are
      * Otherwise an exception is thrown
      */
-    public int getAccountIdIfPasswortMatches(String mail, String password) throws Exception {
+    public int getAccountIdIfPasswortMatches(String email, String password) throws Exception {
         AtomicBoolean matches = new AtomicBoolean(false);
         AtomicBoolean accountExists = new AtomicBoolean(false);
         AtomicInteger accountId = new AtomicInteger(-1);
-        PreparedStatement statement = sql.executeQuery("SELECT account_id, password, salt FROM " + tableName + " WHERE mail = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT account_id, password, salt FROM " + tableName + " WHERE email = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
@@ -191,7 +193,7 @@ public class AccountRepository extends Repository {
                     }
                 }
             }
-        }, mail);
+        }, email);
         if (!accountExists.get()) {
             throw new Exception("Account does not exist");
         }
@@ -208,12 +210,13 @@ public class AccountRepository extends Repository {
     public boolean updateAccount(int accountId, Account account) {
         try (Connection connection = sql.getConnection()) {
             PreparedStatement ps = connection.prepareStatement("UPDATE " + tableName + " SET " +
-                    "birthday = ?, first_name = ?, last_name = ?, username = ?, nationality = ?, location = ?, locale = ?, preferred_currency = ?, instagram_url = ?, twitter_url = ?, facebook_url = ?, linked_in_url = ?, website_url = ?, about_me = ?, profile_picture_url = ?, is_private = ? WHERE account_id = ?");
+                    "birthday = ?, first_name = ?, last_name = ?, username = ?, phone_number = ?, nationality = ?, location = ?, locale = ?, preferred_currency = ?, instagram_url = ?, twitter_url = ?, facebook_url = ?, linked_in_url = ?, website_url = ?, about_me = ?, profile_picture_url = ?, is_private = ? WHERE account_id = ?");
             int index = 1;
             ps.setObject(index++, account.birthday);
             ps.setString(index++, account.firstName);
             ps.setString(index++, account.lastName);
             ps.setString(index++, account.username);
+            ps.setString(index++, account.phoneNumber);
             ps.setString(index++, account.nationality);
             ps.setString(index++, account.location);
             ps.setString(index++, account.locale.toLanguageTag());
@@ -282,12 +285,13 @@ public class AccountRepository extends Repository {
             public Account getObjectFromResultSetEntry(ResultSet resultSet) throws SQLException {
                 return new Account(
                         resultSet.getInt("account_id"),
-                        resultSet.getString("mail"),
+                        resultSet.getString("email"),
                         resultSet.getObject("created_at", OffsetDateTime.class),
                         resultSet.getObject("birthday", LocalDate.class),
                         resultSet.getString("first_name"),
                         resultSet.getString("last_name"),
                         resultSet.getString("username"),
+                        resultSet.getString("phone_number"),
                         resultSet.getString("nationality"),
                         resultSet.getString("location"),
                         Locale.forLanguageTag(resultSet.getString("locale")),
@@ -301,7 +305,7 @@ public class AccountRepository extends Repository {
                         resultSet.getString("profile_picture_url"),
                         resultSet.getBoolean("is_private"),
                         resultSet.getBoolean("is_locked"),
-                        resultSet.getBoolean("mail_verified")
+                        resultSet.getBoolean("email_verified")
                 );
             }
         };

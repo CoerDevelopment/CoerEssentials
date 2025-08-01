@@ -6,7 +6,7 @@
 
     <groupId>de.coerdevelopment</groupId>
     <artifactId>coer-essentials</artifactId>
-    <version>1.2.21</version>
+    <version>1.2.22</version>
 
     <distributionManagement>
         <repository>

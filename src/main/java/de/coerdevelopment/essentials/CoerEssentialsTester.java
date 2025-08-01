@@ -16,6 +16,7 @@ public class CoerEssentialsTester {
         MailModule mailModule = (MailModule) CoerEssentials.getInstance().enableModule(ModuleType.MAIL);
         AccountModule accountModule = (AccountModule) CoerEssentials.getInstance().enableModule(ModuleType.ACCOUNT);
 
+        CoerEssentials.getInstance().startExecutingJobs();
         SpringApplication app = new SpringApplication(CoerEssentialsTester.class);
         app.run(args);
     }

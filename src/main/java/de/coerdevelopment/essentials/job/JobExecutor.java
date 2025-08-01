@@ -48,7 +48,6 @@ public class JobExecutor {
         this.scheduler = Executors.newScheduledThreadPool(config.schedulerPoolSize);
         this.workerPool = Executors.newFixedThreadPool(config.schedulerPoolSize);
         this.cronParser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX));
-        init();
     }
 
     public void submit(Job job, JobOptions options) {
@@ -61,7 +60,7 @@ public class JobExecutor {
         }
     }
 
-    private void init() {
+    public void init() {
         for (JobOptions options : JobOptionsConfig.getInstance().loadOptions()) {
             Job job = registeredJobs.get(options.jobName);
             if (job == null) {

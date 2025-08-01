@@ -14,13 +14,14 @@ import java.util.Locale;
 public class Account {
 
     public int accountId;
-    public String mail;
+    public String email;
     public OffsetDateTime createdAt;
     public LocalDate birthday;
     public int age;
     public String firstName;
     public String lastName;
     public String username;
+    public String phoneNumber;
     public String nationality;
     public String location;
     public Locale locale;
@@ -41,14 +42,15 @@ public class Account {
     public Account() {
     }
 
-    public Account(int accountId, String mail, OffsetDateTime createdAt, LocalDate birthday, String firstName, String lastName, String username, String nationality, String location, Locale locale, CurrencyUnit preferredCurrency, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
+    public Account(int accountId, String email, OffsetDateTime createdAt, LocalDate birthday, String firstName, String lastName, String username, String phoneNumber, String nationality, String location, Locale locale, CurrencyUnit preferredCurrency, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
         this.accountId = accountId;
-        this.mail = mail;
+        this.email = email;
         this.createdAt = createdAt;
         this.birthday = birthday;
         this.firstName = firstName;
         this.lastName = lastName;
         this.username = username;
+        this.phoneNumber = phoneNumber;
         this.nationality = nationality;
         this.location = location;
         this.locale = locale;

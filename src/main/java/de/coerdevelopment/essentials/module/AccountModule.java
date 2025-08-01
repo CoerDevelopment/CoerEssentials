@@ -103,17 +103,16 @@ public class AccountModule extends Module {
         accountsById = new HashMap<>();
 
         JobExecutor.registerJob(new AccountLoginHistoryJob());
-        JobExecutor.registerJob(new AccountCacheJob()   );
-        JobExecutor.getInstance();
+        JobExecutor.registerJob(new AccountCacheJob());
     }
 
     /**
      * Creates a new account if the mail is not already in use
      * @return true if the account was created, otherwise false
      */
-    public boolean createAccount(String mail, String password, Locale locale) {
+    public boolean createAccount(String email, String password, Locale locale) {
         // check if this mail is already associated with an account
-        if (accountRepository.doesMailExists(mail)) {
+        if (accountRepository.doesEmailExists(email)) {
             return false;
         }
 
@@ -124,7 +123,7 @@ public class AccountModule extends Module {
         // create the account in database
         int accountId;
         try {
-            accountId = accountRepository.insertAccount(mail, passwordHash, salt, locale);
+            accountId = accountRepository.insertAccount(email, passwordHash, salt, locale);
             Account account = accountRepository.getAccount(accountId);
             accountsById.put(accountId, account);
         } catch (Exception e) {
@@ -134,7 +133,7 @@ public class AccountModule extends Module {
 
         // send mail verification if enabled
         if (mailConfirmationEnabled) {
-            sendMailVerification(accountId);
+            sendEmailVerification(accountId);
         }
         return true;
     }
@@ -142,8 +141,8 @@ public class AccountModule extends Module {
     /**
      * Checks the provided credentials and returns the account id if they are correct
      */
-    public int login(String mail, String passwordHash) throws Exception {
-        return accountRepository.getAccountIdIfPasswortMatches(mail, passwordHash);
+    public int login(String email, String passwordHash) throws Exception {
+        return accountRepository.getAccountIdIfPasswortMatches(email, passwordHash);
     }
 
     /**
@@ -152,12 +151,12 @@ public class AccountModule extends Module {
     public String getToken(Account account) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("accountId", account.accountId);
-        claims.put("mail", account.mail);
+        claims.put("email", account.email);
         claims.put("username", account.username);
         claims.put("createdAt", account.createdAt.toString());
         claims.put("locale", account.locale.toLanguageTag());
         claims.put("defaultCurrency", account.preferredCurrency.getCurrencyCode());
-        claims.put("mailVerified", account.mailVerified);
+        claims.put("emailVerified", account.mailVerified);
         return CoerSecurity.getInstance().createToken(String.valueOf(account.accountId), claims);
     }
 
@@ -172,64 +171,64 @@ public class AccountModule extends Module {
     /**
      * Checks if the given account has a verified mail
      */
-    public boolean isMailVerified(int accountId) {
-        return accountRepository.isMailVerified(accountId);
+    public boolean isEmailVerified(int accountId) {
+        return accountRepository.isEmailVerified(accountId);
     }
 
     /**
      * Generates a new verification code and sends it to the mail of the given account
      */
-    public ResponseEntity sendMailVerification(int accountId) {
+    public ResponseEntity sendEmailVerification(int accountId) {
         if (!mailConfirmationEnabled) {
-            return ResponseEntity.badRequest().body("Unable to verify mail.");
+            return ResponseEntity.badRequest().body("Unable to verify email.");
         }
         // check if the mail is already verified
-        if (isMailVerified(accountId)) {
-            return ResponseEntity.badRequest().body("Mail is already verified.");
+        if (isEmailVerified(accountId)) {
+            return ResponseEntity.badRequest().body("Email is already verified.");
         }
 
         // check if account exists and get mail
-        String mail = accountRepository.getMail(accountId);
-        if (mail == null) {
+        String email = accountRepository.getEmail(accountId);
+        if (email == null) {
             return ResponseEntity.badRequest().body("Unable to verify mail.");
         }
 
         // check if verification is pending
-        if (accountRepository.isMailVerificationPending(accountId)) {
+        if (accountRepository.isEmailVerificationPending(accountId)) {
             return ResponseEntity.badRequest().body("Verification code already send.");
         }
 
         // generate new verification code
         String code = getVerificationCode();
         long expiration = System.currentTimeMillis() + mailVerificationCodeExpiration;
-        accountRepository.setMailVerificationCode(accountId, code, expiration);
+        accountRepository.setEmailVerificationCode(accountId, code, expiration);
 
         // send mail
         String programName = CoerEssentials.getInstance().getProgramName();
         String text = "Your verification code is: " + code;
-        mailModule.sendMail(mail, programName + " Verification Code", text);
+        mailModule.sendMail(email, programName + " Verification Code", text);
         return ResponseEntity.ok("Verification code send.");
     }
 
     /**
      * Uses the verification code send by the client to verify the mail of the given account
      */
-    public ResponseEntity verifyMail(int accountId, String verificationCode) {
+    public ResponseEntity verifyEmail(int accountId, String verificationCode) {
         // check if the mail is already verified
-        if (isMailVerified(accountId)) {
-            return ResponseEntity.ok("Mail is already verified.");
+        if (isEmailVerified(accountId)) {
+            return ResponseEntity.ok("Email is already verified.");
         }
         // check if the verification code is correct
         // if the code is expired, send a new one
         try {
-            if (accountRepository.doesMailVerificationCodeMatch(accountId, verificationCode)) {
-                accountRepository.setMailVerified(accountId);
+            if (accountRepository.doesEmailVerificationCodeMatch(accountId, verificationCode)) {
+                accountRepository.setEmailVerified(accountId);
                 return ResponseEntity.ok().build();
             } else {
                 return ResponseEntity.badRequest().body("Invalid verification code.");
             }
         } catch (Exception e) {
-            sendMailVerification(accountId);
+            sendEmailVerification(accountId);
             return ResponseEntity.badRequest().body("Verification code expired. New code send.");
         }
     }
@@ -237,12 +236,12 @@ public class AccountModule extends Module {
     /**
      * Sends a link to the mail of the given account to reset the password
      */
-    public void sendPasswordReset(String mail) {
+    public void sendPasswordReset(String email) {
         // check if the mail is associated with an account
-        if (!accountRepository.doesMailExists(mail)) {
+        if (!accountRepository.doesEmailExists(email)) {
             return;
         }
-        int accountId = accountRepository.getAccountIdByMail(mail);
+        int accountId = accountRepository.getAccountIdByEmail(email);
 
         // generate new password reset token
         String token = CoerSecurity.getInstance().createToken("passwordReset" + accountId, passwordResetCodeExpiration);
@@ -251,7 +250,7 @@ public class AccountModule extends Module {
         String programName = CoerEssentials.getInstance().getProgramName();
         String url = passwortResetUrl.replace("%token%", "token=" + token);
         String text = "Click the following link to reset your password: " + url;
-        mailModule.sendMail(mail, programName + " Password Reset", text);
+        mailModule.sendMail(email, programName + " Password Reset", text);
     }
 
     /**
@@ -363,6 +362,13 @@ public class AccountModule extends Module {
      */
     public void setUsername(int accountId, String username) {
         accountRepository.setProperty(accountId, "username", username);
+    }
+
+    /**
+     * Sets the phone number of the account
+     */
+    public void setPhoneNumber(int accountId, String phoneNumber) {
+        accountRepository.setProperty(accountId, "phone_number", phoneNumber);
     }
 
     /**

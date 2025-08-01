@@ -7,10 +7,12 @@ public class SQLTable {
 
     private String name;
     private List<SQLEntity> entities;
+    private List<String> checkConstraints;
 
     public SQLTable(String name) {
         this.name = name;
         this.entities = new ArrayList<>();
+        this.checkConstraints = new ArrayList<>();
     }
 
     public String getCreateTableStatement(SQLDialect dialect) {
@@ -19,6 +21,11 @@ public class SQLTable {
             query += entity.getSQL(dialect) + ",";
         }
         query = query.substring(0, query.length() - 1);
+        if (!checkConstraints.isEmpty()) {
+            for (String constraint : checkConstraints) {
+                query += ", CHECK (" + constraint + ")";
+            }
+        }
         query += ");";
         return query;
     }
@@ -98,6 +105,13 @@ public class SQLTable {
 
     public void addDouble(String name, int length, int digits, boolean nullable) {
         addEntity(name, "DECIMAL(" + length + "," + digits + ")", nullable);
+    }
+
+    public void addCheck(String constraint) {
+        if (constraint == null || constraint.isEmpty()) {
+            throw new IllegalArgumentException("Check constraint cannot be null or empty.");
+        }
+        checkConstraints.add(constraint);
     }
 
     public String getCreateIndexStatement(String indexName, String... columnName) {

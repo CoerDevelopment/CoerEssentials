@@ -1,5 +1,6 @@
 package de.coerdevelopment.essentials;
 
+import de.coerdevelopment.essentials.job.JobExecutor;
 import de.coerdevelopment.essentials.module.*;
 import de.coerdevelopment.essentials.module.Module;
 
@@ -90,6 +91,9 @@ public class CoerEssentials {
         return (SQLModule) genericModule;
     }
 
+    public void startExecutingJobs() {
+        JobExecutor.getInstance().init();
+    }
 
     public String getProgramName() {
         return programName;
