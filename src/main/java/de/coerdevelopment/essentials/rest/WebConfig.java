@@ -11,9 +11,13 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private AuthenticationInterceptor authenticationInterceptor;
 
+    @Autowired
+    private IdempotencyInterceptor idempotencyInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authenticationInterceptor);
+        registry.addInterceptor(idempotencyInterceptor);
     }
 
 }

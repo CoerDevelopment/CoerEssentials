@@ -38,6 +38,7 @@ public class AccountController {
      * Creates a new account
      * @return a valid token for the new account
      */
+    @IdempotentRequest
     @PostMapping()
     public ResponseEntity<String> createAccount(@RequestBody AccountCredentialsRequest request) {
         request.email = request.email.toLowerCase(Locale.ROOT);
@@ -155,6 +156,7 @@ public class AccountController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refresh token missing");
     }
 
+    @IdempotentRequest
     @PostMapping("/security/requestpasswordreset/{email}")
     public void requestPasswordReset(@PathVariable("email") String email) {
         email = email.toLowerCase(Locale.ROOT);
@@ -192,6 +194,7 @@ public class AccountController {
         }
     }
 
+    @IdempotentRequest
     @AuthentificationRequired
     @PostMapping("/mail/requestverification")
     public ResponseEntity requestMailVerification(@RequestAttribute("accountId") int accountId) {
@@ -204,6 +207,7 @@ public class AccountController {
         return getAccountModule().verifyEmail(accountId, verificationCode);
     }
 
+    @IdempotentRequest
     @AuthentificationRequired
     @PostMapping("/profilepicture")
     public ResponseEntity<String> uploadProfilePicture(@RequestAttribute("accountId") int accountId, @RequestParam("file") MultipartFile file) {
