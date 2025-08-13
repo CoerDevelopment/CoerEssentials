@@ -4,8 +4,10 @@ import de.coerdevelopment.essentials.CoerEssentials;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class JobExecution {
@@ -63,7 +65,11 @@ public class JobExecution {
             endedAt = OffsetDateTime.now();
             duration = ChronoUnit.MILLIS.between(startetAt.toInstant(), endedAt.toInstant());
             if (CoerEssentials.getInstance().getSQLModule() != null) {
-                JobExecutionRepository.getInstance().insertLog(this);
+                try {
+                    JobExecutionRepository.getInstance().insertLogs(Arrays.asList(this));
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }

@@ -48,7 +48,7 @@ public class LocalFileStorageRepository extends Repository{
         sql.batchInsert(tableName, files, columnMapper, 200);
     }
 
-    public List<FileMetadata> getFilesByAccountId(int accountId) {
+    public List<FileMetadata> getFilesByAccountId(long accountId) {
         List<FileMetadata> files = new ArrayList<>();
         String query = "SELECT * FROM " + tableName + " WHERE account_id = ?";
         sql.executeQuery(query, new StatementCustomAction() {
@@ -63,7 +63,7 @@ public class LocalFileStorageRepository extends Repository{
         return files;
     }
 
-    public FileMetadata getFileMetadataByFileName(int accountId, String fileName) {
+    public FileMetadata getFileMetadataByFileName(long accountId, String fileName) {
         List<FileMetadata> files = new ArrayList<>();
         String query = "SELECT * FROM " + tableName + " WHERE account_id = ? AND file_name = ?";
         sql.executeQuery(query, new StatementCustomAction() {
@@ -78,12 +78,12 @@ public class LocalFileStorageRepository extends Repository{
         return files.isEmpty() ? null : files.getFirst();
     }
 
-    public List<FileMetadata> getFileMetadataByAccounts(List<Integer> accountIds, String fileName) {
+    public List<FileMetadata> getFileMetadataByAccounts(List<Long> accountIds, String fileName) {
         List<FileMetadata> files = new ArrayList<>();
         if (accountIds.isEmpty()) {
             return files;
         }
-        String query = "SELECT * FROM " + tableName + " WHERE account_id IN (" + SQLUtil.integerListToSearchTerm(accountIds) + ") AND file_name = ?";
+        String query = "SELECT * FROM " + tableName + " WHERE account_id IN (" + SQLUtil.longListToSearchTerm(accountIds) + ") AND file_name = ?";
         sql.executeQuery(query, new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
@@ -111,7 +111,7 @@ public class LocalFileStorageRepository extends Repository{
         return files.isEmpty() ? null : files.getFirst();
     }
 
-    public void deleteMetadata(int accountId, String fileName) {
+    public void deleteMetadata(long accountId, String fileName) {
         String query = "DELETE FROM " + tableName + " WHERE account_id = ? AND file_name = ?";
         sql.executeQuery(query, accountId, fileName);
     }
@@ -132,13 +132,13 @@ public class LocalFileStorageRepository extends Repository{
 
         @Override
         public FileMetadata getObjectFromResultSetEntry(ResultSet resultSet) throws SQLException {
-            int fileId = resultSet.getInt("file_id");
+            long fileId = resultSet.getLong("file_id");
             String fileName = resultSet.getString("file_name");
             String storagePath = resultSet.getString("storage_path");
             String storedFileName = resultSet.getString("stored_file_name");
             String mimeType = resultSet.getString("mime_type");
             long fileSizeBytes = resultSet.getLong("file_size_bytes");
-            int accountId = resultSet.getInt("account_id");
+            long accountId = resultSet.getLong("account_id");
             OffsetDateTime createdAt = resultSet.getObject("created_at", OffsetDateTime.class);
             return new FileMetadata(fileId, fileName, storagePath, storedFileName, mimeType, fileSizeBytes, accountId, createdAt);
         }

@@ -1,7 +1,7 @@
 package de.coerdevelopment.essentials.utils;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +18,7 @@ public class CacheManager {
      * Set to -1 for unlimited cache size
      */
     private final long maxCacheSize;
-    private Map<String, Object> cache;
+    private ConcurrentHashMap<String, Object> cache;
 
     public CacheManager(long ttl) {
         this(ttl, -1);
@@ -26,7 +26,7 @@ public class CacheManager {
 
     public CacheManager(long ttl, long maxCacheSize) {
         this.ttl = ttl;
-        cache = new HashMap<>();
+        cache = new ConcurrentHashMap<>();
         this.maxCacheSize = maxCacheSize;
     }
 

@@ -31,7 +31,7 @@ public class LocalFileStorage extends FileStorage {
     }
 
     @Override
-    public String store(int accountId, MultipartFile file, String fileName) throws IOException {
+    public String store(long accountId, MultipartFile file, String fileName) throws IOException {
         validateFile(file);
 
         String originalFilename = file.getOriginalFilename();
@@ -58,7 +58,7 @@ public class LocalFileStorage extends FileStorage {
     }
 
     @Override
-    public Resource load(int accountId, String fileName) {
+    public Resource load(long accountId, String fileName) {
         FileMetadata metadata = LocalFileStorageRepository.getInstance().getFileMetadataByFileName(accountId, fileName);
         if (metadata == null) {
             throw new RuntimeException("File not found: " + fileName);
@@ -77,7 +77,7 @@ public class LocalFileStorage extends FileStorage {
     }
 
     @Override
-    public void delete(int accountId, String fileName) {
+    public void delete(long accountId, String fileName) {
         FileMetadata metadata = LocalFileStorageRepository.getInstance().getFileMetadataByFileName(accountId, fileName);
         if (metadata == null) {
             return;

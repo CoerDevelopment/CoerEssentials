@@ -204,7 +204,7 @@ public class SQL {
         return result;
     }
 
-    private <T> Map<Integer, T> genericBatchInsert(String tableName, List<T> objects, ColumnMapper<T> columnMapper, int batchSize, boolean storeKeys) throws SQLException {
+    private <T> Map<Long, T> genericBatchInsert(String tableName, List<T> objects, ColumnMapper<T> columnMapper, int batchSize, boolean storeKeys) throws SQLException {
         if (objects.isEmpty()) {
             throw new IllegalArgumentException("The Objects are empty.");
         }
@@ -216,7 +216,7 @@ public class SQL {
         List<String> columns = new ArrayList<>(firstMapping.keySet());
         String columnNames = String.join(", ", columns);
 
-        Map<Integer, T> idObjectMap = new HashMap<>();
+        Map<Long, T> idObjectMap = new HashMap<>();
 
         try (Connection connection = getConnection()) {
             boolean initialAutoCommit = connection.getAutoCommit();
@@ -261,15 +261,15 @@ public class SQL {
         genericBatchInsert(tableName, objects, columnMapper, batchSize, false);
     }
 
-    public <T> Map<Integer, T> batchInsertReturningKeys(String tableName, List<T> objects, ColumnMapper<T> columnMapper, int batchSize) throws SQLException {
+    public <T> Map<Long, T> batchInsertReturningKeys(String tableName, List<T> objects, ColumnMapper<T> columnMapper, int batchSize) throws SQLException {
         return genericBatchInsert(tableName, objects, columnMapper, batchSize, true);
     }
 
-    private <T> void storeKeys(PreparedStatement pstmt, List<T> batch, Map<Integer, T> idObjectMap) throws SQLException {
+    private <T> void storeKeys(PreparedStatement pstmt, List<T> batch, Map<Long, T> idObjectMap) throws SQLException {
         try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
             int i = 0;
             while (generatedKeys.next()) {
-                int generatedId = generatedKeys.getInt(1);
+                long generatedId = generatedKeys.getLong(1);
                 if (i >= batch.size()) {
                     throw new SQLException("Generated more keys than objects in batch.");
                 }

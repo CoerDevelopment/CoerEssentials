@@ -39,7 +39,7 @@ public class SQLTable {
     }
 
     public void addAutoKey(String name) {
-        SQLEntity entity = new SQLEntity(name, "INT", false);
+        SQLEntity entity = new SQLEntity(name, "BIGINT", false);
         entity.setAutoIncrement();
         entity.setPrimary();
         this.entities.add(entity);
@@ -56,7 +56,7 @@ public class SQLTable {
     }
 
     public SQLEntity addForeignKey(String name, String foreignKeyTable, String foreignKeyColumn, boolean onDeleteCascade, boolean nullable) {
-        SQLEntity entity = new SQLEntity(name, "INT");
+        SQLEntity entity = new SQLEntity(name, "BIGINT");
         if (!nullable) {
             entity.setNotNull();
         }

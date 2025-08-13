@@ -51,13 +51,13 @@ public class AccountController {
 
     @AuthentificationRequired
     @GetMapping()
-    public ResponseEntity<Account> getAccount(@RequestAttribute("accountId") int accountId) {
+    public ResponseEntity<Account> getAccount(@RequestAttribute("accountId") long accountId) {
         return ResponseEntity.ok(getAccountModule().getAccount(accountId));
     }
 
     @AuthentificationRequired
     @PutMapping()
-    public ResponseEntity updateAccount(@RequestAttribute("accountId") int accountId, @RequestBody Account account) {
+    public ResponseEntity updateAccount(@RequestAttribute("accountId") long accountId, @RequestBody Account account) {
         try {
             Account updatedAccount = getAccountModule().updateAccount(accountId, account);
             return ResponseEntity.ok(updatedAccount);
@@ -68,7 +68,7 @@ public class AccountController {
 
     @AuthentificationRequired
     @DeleteMapping()
-    public ResponseEntity deleteAccount(@RequestAttribute("accountId") int accountId) {
+    public ResponseEntity deleteAccount(@RequestAttribute("accountId") long accountId) {
         return getAccountModule().deleteAccount(accountId);
     }
 
@@ -82,7 +82,7 @@ public class AccountController {
                 accountLoginLocks.remove(request.email);
             }
         }
-        int accountId = -1;
+        long accountId = -1;
         try {
             accountId = getAccountModule().login(request.email, request.password);
         } catch (Exception e) {
@@ -140,11 +140,10 @@ public class AccountController {
                     if (getAccountModule().isRefreshTokenBlacklisted(refreshToken)) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token is blacklisted");
                     }
-                    int accountId = CoerSecurity.getInstance().getSubjectFromTokenAsInt(refreshToken);
+                    long accountId = CoerSecurity.getInstance().getSubjectFromTokenAsInt(refreshToken);
                     Account account = getAccountModule().getAccount(accountId);
                     if (accountId > 0 && account != null && !account.isLocked) {
                         String newAccessToken = getAccountModule().getToken(account);
-
                         return ResponseEntity.ok(newAccessToken);
                     } else {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
@@ -197,20 +196,20 @@ public class AccountController {
     @IdempotentRequest
     @AuthentificationRequired
     @PostMapping("/mail/requestverification")
-    public ResponseEntity requestMailVerification(@RequestAttribute("accountId") int accountId) {
+    public ResponseEntity requestMailVerification(@RequestAttribute("accountId") long accountId) {
         return getAccountModule().sendEmailVerification(accountId);
     }
 
     @AuthentificationRequired
     @PutMapping("/mail/verify/{verificationCode}")
-    public ResponseEntity verifyMail(@RequestAttribute("accountId") int accountId, @PathVariable("verificationCode") String verificationCode) {
+    public ResponseEntity verifyMail(@RequestAttribute("accountId") long accountId, @PathVariable("verificationCode") String verificationCode) {
         return getAccountModule().verifyEmail(accountId, verificationCode);
     }
 
     @IdempotentRequest
     @AuthentificationRequired
     @PostMapping("/profilepicture")
-    public ResponseEntity<String> uploadProfilePicture(@RequestAttribute("accountId") int accountId, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadProfilePicture(@RequestAttribute("accountId") long accountId, @RequestParam("file") MultipartFile file) {
         try {
             getAccountModule().uploadProfilePicture(accountId, file);
             return ResponseEntity.ok("Profile picture uploaded successfully.");
@@ -221,7 +220,7 @@ public class AccountController {
 
     @AuthentificationRequired
     @GetMapping("/profilepicture")
-    public ResponseEntity<Resource> getProfilePicture(@RequestAttribute("accountId") int accountId) {
+    public ResponseEntity<Resource> getProfilePicture(@RequestAttribute("accountId") long accountId) {
         try {
             Resource resource = getAccountModule().getProfilePicture(accountId, accountId);
             FileMetadata fileMetadata = LocalFileStorageRepository.getInstance().getFileMetadataByFileName(accountId, "profilePicture");
@@ -239,7 +238,7 @@ public class AccountController {
 
     @AuthentificationRequired
     @GetMapping("/profilepicture/{fileUUID}")
-    public ResponseEntity<Resource> getProfilePicture(@RequestAttribute("accountId") int accountId, @PathVariable("fileUUID") String fileUUID) {
+    public ResponseEntity<Resource> getProfilePicture(@RequestAttribute("accountId") long accountId, @PathVariable("fileUUID") String fileUUID) {
         try {
             FileMetadata metadata = LocalFileStorageRepository.getInstance().getFileMetadataByUUID(fileUUID);
             Resource resource = getAccountModule().getProfilePicture(accountId, metadata.accountId);

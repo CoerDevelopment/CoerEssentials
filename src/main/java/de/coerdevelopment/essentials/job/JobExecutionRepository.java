@@ -3,7 +3,9 @@ package de.coerdevelopment.essentials.job;
 import com.google.gson.Gson;
 import de.coerdevelopment.essentials.repository.*;
 
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 
 public class JobExecutionRepository extends Repository {
@@ -17,8 +19,11 @@ public class JobExecutionRepository extends Repository {
         return instance;
     }
 
+    private Gson gson;
+
     private JobExecutionRepository() {
         super("job_executions");
+        gson = new Gson();
     }
 
     @Override
@@ -44,19 +49,8 @@ public class JobExecutionRepository extends Repository {
 
     }
 
-    public void insertLog(JobExecution jobExecution) {
-        String query = "INSERT INTO " + tableName + " (execution_uuid, name, options, data, stacktrace, started_at, ended_at, duration, logged_at) " +
-                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        String optionsJson = new Gson().toJson(jobExecution.options);
-        sql.executeQuery(query, jobExecution.uuid.toString(),
-                jobExecution.job.getName(),
-                SQLUtil.getJsonPgObject(optionsJson),
-                jobExecution.data,
-                jobExecution.stackTrace,
-                jobExecution.startetAt,
-                jobExecution.endedAt,
-                jobExecution.duration,
-                OffsetDateTime.now());
+    public void insertLogs(List<JobExecution> executions) throws SQLException {
+        sql.batchInsert(tableName, executions, columnMapper, 200);
     }
 
     private final ColumnMapper<JobExecution> columnMapper = new ColumnMapper<JobExecution>() {
@@ -64,7 +58,7 @@ public class JobExecutionRepository extends Repository {
         public Map<String, Object> mapColumns(JobExecution obj) {
             return Map.of("execution_uuid", obj.uuid.toString(),
                           "name", obj.job.getName(),
-                          "options", SQLUtil.getJsonPgObject(new Gson().toJson(obj.options)),
+                          "options", SQLUtil.getJsonPgObject(gson.toJson(obj.options)),
                           "data", obj.data,
                           "stacktrace", obj.stackTrace,
                           "started_at", obj.startetAt,

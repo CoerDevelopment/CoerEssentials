@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -29,9 +30,9 @@ public class AccountModule extends Module {
     private AccountRepository accountRepository;
     public AccountLoginRepository accountLoginRepository;
     private MailModule mailModule;
-    private Map<Integer, Integer> restUsagePerAccountInShortTime;
+    private ConcurrentHashMap<Long, Integer> restUsagePerAccountInShortTime;
     private FileStorage profilePictureStorage;
-    private Map<Integer, Account> accountsById;
+    private ConcurrentHashMap<Long, Account> accountsById;
     private List<String> blacklistedRefreshTokens;
 
     // Options
@@ -80,7 +81,7 @@ public class AccountModule extends Module {
         LocalFileStorageRepository.getInstance().createTable();
         CoerSecurity.newInstance(hashAlgorithm, saltLength, tokenExpiration);
         this.mailModule = CoerEssentials.getInstance().getMailModule();
-        this.restUsagePerAccountInShortTime = new HashMap<>();
+        this.restUsagePerAccountInShortTime = new ConcurrentHashMap<>();
         // Initialize profile picture storage
         String profilePictureStorageType = getStringOption("profilePictureStorage");
         if (!profilePictureStorageType.equals("local")) {
@@ -100,7 +101,7 @@ public class AccountModule extends Module {
             throw new RuntimeException("Failed to initialize profile picture storage", e);
         }
 
-        accountsById = new HashMap<>();
+        accountsById = new ConcurrentHashMap<>();
 
         JobExecutor.registerJob(new AccountLoginHistoryJob());
         JobExecutor.registerJob(new AccountCacheJob());
@@ -121,7 +122,7 @@ public class AccountModule extends Module {
         String passwordHash = CoerSecurity.getInstance().hashPassword(password, salt);
 
         // create the account in database
-        int accountId;
+        long accountId;
         try {
             accountId = accountRepository.insertAccount(email, passwordHash, salt, locale);
             Account account = accountRepository.getAccount(accountId);
@@ -141,7 +142,7 @@ public class AccountModule extends Module {
     /**
      * Checks the provided credentials and returns the account id if they are correct
      */
-    public int login(String email, String passwordHash) throws Exception {
+    public long login(String email, String passwordHash) throws Exception {
         return accountRepository.getAccountIdIfPasswortMatches(email, passwordHash);
     }
 
@@ -171,14 +172,14 @@ public class AccountModule extends Module {
     /**
      * Checks if the given account has a verified mail
      */
-    public boolean isEmailVerified(int accountId) {
+    public boolean isEmailVerified(long accountId) {
         return accountRepository.isEmailVerified(accountId);
     }
 
     /**
      * Generates a new verification code and sends it to the mail of the given account
      */
-    public ResponseEntity sendEmailVerification(int accountId) {
+    public ResponseEntity sendEmailVerification(long accountId) {
         if (!mailConfirmationEnabled) {
             return ResponseEntity.badRequest().body("Unable to verify email.");
         }
@@ -213,7 +214,7 @@ public class AccountModule extends Module {
     /**
      * Uses the verification code send by the client to verify the mail of the given account
      */
-    public ResponseEntity verifyEmail(int accountId, String verificationCode) {
+    public ResponseEntity verifyEmail(long accountId, String verificationCode) {
         // check if the mail is already verified
         if (isEmailVerified(accountId)) {
             return ResponseEntity.ok("Email is already verified.");
@@ -241,7 +242,7 @@ public class AccountModule extends Module {
         if (!accountRepository.doesEmailExists(email)) {
             return;
         }
-        int accountId = accountRepository.getAccountIdByEmail(email);
+        long accountId = accountRepository.getAccountIdByEmail(email);
 
         // generate new password reset token
         String token = CoerSecurity.getInstance().createToken("passwordReset" + accountId, passwordResetCodeExpiration);
@@ -267,7 +268,7 @@ public class AccountModule extends Module {
         if (!subject.startsWith("passwordReset")) {
             return false;
         }
-        int accountId = Integer.parseInt(subject.replace("passwordReset", ""));
+        long accountId = Long.parseLong(subject.replace("passwordReset", ""));
 
         // generate new salt and hash the password
         String salt = CoerSecurity.getInstance().generateSalt();
@@ -280,7 +281,7 @@ public class AccountModule extends Module {
      * Checks if the account is spam protected
      * If the account is spam protected, the requests will not be processed and the client call will be logged
      */
-    public boolean isAccountSpamProtected(int accountId) {
+    public boolean isAccountSpamProtected(long accountId) {
         if (!spamProtectionEnabled) {
             return false;
         }
@@ -298,21 +299,21 @@ public class AccountModule extends Module {
         }
     }
 
-    public void lockAccount(int accountId) {
+    public void lockAccount(long accountId) {
         accountRepository.setProperty(accountId, "is_locked", true);
         accountsById.get(accountId).isLocked = true;
     }
 
-    public void unlockAccount(int accountId) {
+    public void unlockAccount(long accountId) {
         accountRepository.setProperty(accountId, "is_locked", false);
         accountsById.get(accountId).isLocked = false;
     }
 
-    public String uploadProfilePicture(int accountId, MultipartFile file) throws IOException {
+    public String uploadProfilePicture(long accountId, MultipartFile file) throws IOException {
         return profilePictureStorage.store(accountId, file, "profilePicture");
     }
 
-    public Resource getProfilePicture(int accountId, int targetAccountId) {
+    public Resource getProfilePicture(long accountId, long targetAccountId) {
         Account target = getAccount(targetAccountId);
         if (target.isPrivate && accountId != targetAccountId) {
             throw new RuntimeException("Target account is private.");
@@ -320,7 +321,7 @@ public class AccountModule extends Module {
         return profilePictureStorage.load(targetAccountId, "profilePicture");
     }
 
-    public Account updateAccount(int accountId, Account account)throws Exception {
+    public Account updateAccount(long accountId, Account account) throws Exception {
         Account currentState = getAccount(accountId);
         if (currentState.isLocked != account.isLocked) {
             throw new Exception("Unable to change lock status");
@@ -339,116 +340,116 @@ public class AccountModule extends Module {
     /**
      * Sets the birthday of the account
      */
-    public void setBirthday(int accountId, LocalDate birthday) {
+    public void setBirthday(long accountId, LocalDate birthday) {
         accountRepository.setProperty(accountId, "birthday", birthday);
     }
 
     /**
      * Sets the first name of the account
      */
-    public void setFirstName(int accountId, String firstName) {
+    public void setFirstName(long accountId, String firstName) {
         accountRepository.setProperty(accountId, "first_name", firstName);
     }
 
     /**
      * Sets the last name of the account
      */
-    public void setLastName(int accountId, String lastName) {
+    public void setLastName(long accountId, String lastName) {
         accountRepository.setProperty(accountId, "last_name", lastName);
     }
 
     /**
      * Sets the username of the account
      */
-    public void setUsername(int accountId, String username) {
+    public void setUsername(long accountId, String username) {
         accountRepository.setProperty(accountId, "username", username);
     }
 
     /**
      * Sets the phone number of the account
      */
-    public void setPhoneNumber(int accountId, String phoneNumber) {
+    public void setPhoneNumber(long accountId, String phoneNumber) {
         accountRepository.setProperty(accountId, "phone_number", phoneNumber);
     }
 
     /**
      * Sets the nationality of the account
      */
-    public void setNationality(int accountId, String nationality) {
+    public void setNationality(long accountId, String nationality) {
         accountRepository.setProperty(accountId, "nationality", nationality);
     }
 
     /**
      * Sets the location of the account
      */
-    public void setLocation(int accountId, String location) {
+    public void setLocation(long accountId, String location) {
         accountRepository.setProperty(accountId, "location", location);
     }
 
     /**
      * Sets the instagram Url of the account
      */
-    public void setInstagramUrl(int accountId, String instagramUrl) {
+    public void setInstagramUrl(long accountId, String instagramUrl) {
         accountRepository.setProperty(accountId, "instagram_url", instagramUrl);
     }
 
     /**
      * Sets the twitter Url of the account
      */
-    public void setTwitterUrl(int accountId, String twitterUrl) {
+    public void setTwitterUrl(long accountId, String twitterUrl) {
         accountRepository.setProperty(accountId, "twitter_url", twitterUrl);
     }
 
     /**
      * Sets the facebook Url of the account
      */
-    public void setFacebookUrl(int accountId, String facebookUrl) {
+    public void setFacebookUrl(long accountId, String facebookUrl) {
         accountRepository.setProperty(accountId, "facebook_url", facebookUrl);
     }
 
     /**
      * Sets the linkedin Url of the account
      */
-    public void setLinkedinUrl(int accountId, String linkedinUrl) {
+    public void setLinkedinUrl(long accountId, String linkedinUrl) {
         accountRepository.setProperty(accountId, "linked_in_url", linkedinUrl);
     }
 
     /**
      * Sets the website Url of the account
      */
-    public void setWebsiteUrl(int accountId, String websiteUrl) {
+    public void setWebsiteUrl(long accountId, String websiteUrl) {
         accountRepository.setProperty(accountId, "website_url", websiteUrl);
     }
 
     /**
      * Sets the about me text of the account
      */
-    public void setAboutMe(int accountId, String aboutMe) {
+    public void setAboutMe(long accountId, String aboutMe) {
         accountRepository.setProperty(accountId, "about_me", aboutMe);
     }
 
     /**
      * Sets the profile picture Url of the account
      */
-    public void setProfilePictureUrl(int accountId, String profilePictureUrl) {
+    public void setProfilePictureUrl(long accountId, String profilePictureUrl) {
         accountRepository.setProperty(accountId, "profile_picture_url", profilePictureUrl);
     }
 
-    public void setPrivateStatus(int accountId, boolean isPrivate) {
+    public void setPrivateStatus(long accountId, boolean isPrivate) {
         accountRepository.setProperty(accountId, "is_private", isPrivate);
     }
 
     /**
      * Returns the account with the given id
      */
-    public Account getAccount(int accountId) {
+    public Account getAccount(long accountId) {
         return accountsById.get(accountId);
     }
 
     /**
      * Deletes the account
      */
-    public ResponseEntity deleteAccount(int accountId) {
+    public ResponseEntity deleteAccount(long accountId) {
         return accountRepository.deleteAccount(accountId) ?
                 ResponseEntity.ok("Account have been deleted") :
                 ResponseEntity.badRequest().body("Unable to delete account");

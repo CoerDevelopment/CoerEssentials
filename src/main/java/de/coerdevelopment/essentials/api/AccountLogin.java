@@ -4,13 +4,13 @@ import java.time.OffsetDateTime;
 
 public class AccountLogin {
 
-    public int loginId;
+    public long loginId;
     public String mail;
     public OffsetDateTime loginAt;
     public boolean success;
     public String failureReason;
 
-    public AccountLogin(int loginId, String mail, OffsetDateTime loginAt, boolean success, String failureReason) {
+    public AccountLogin(long loginId, String mail, OffsetDateTime loginAt, boolean success, String failureReason) {
         this(mail, loginAt, success, failureReason);
         this.loginId = loginId;
     }

@@ -84,6 +84,14 @@ public class CoerSecurity {
         return createToken(String.valueOf(subject), expiration, null);
     }
 
+    public String createToken(long subject) {
+        return createToken(String.valueOf(subject));
+    }
+
+    public String createToken(long subject, long expiration) {
+        return createToken(String.valueOf(subject), expiration, null);
+    }
+
     public String createToken(String subject, long expiration) {
         return createToken(String.valueOf(subject), expiration, null);
     }
@@ -116,6 +124,10 @@ public class CoerSecurity {
         return Integer.parseInt(getSubjectFromToken(token));
     }
 
+    public long getSubjectFromTokenAsLong(String token) {
+        return Long.parseLong(getSubjectFromToken(token));
+    }
+
     private boolean isTokenValid(String token) {
         try {
             Jwts.parser().setSigningKey(SECRET_KEY).build().parseSignedClaims(token);
@@ -144,7 +156,7 @@ public class CoerSecurity {
         return null;
     }
 
-    public synchronized String stringToHash(String input) {
+    public String stringToHash(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance(ALGORITHM);
             byte[] array = md.digest(input.getBytes(StandardCharsets.UTF_8));

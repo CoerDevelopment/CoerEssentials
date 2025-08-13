@@ -6,16 +6,16 @@ import java.time.OffsetDateTime;
 
 public class FileMetadata {
 
-    public int fileId;
+    public long fileId;
     public String fileName;
     public String storagePath;
     public String storedFileName;
     public String mimeType;
     public long fileSizeBytes;
-    public int accountId;
+    public long accountId;
     public OffsetDateTime createdAt;
 
-    public FileMetadata(int fileId, String fileName, String storagePath, String storedFileName, String mimeType, long fileSizeBytes, int accountId, OffsetDateTime createdAt) {
+    public FileMetadata(long fileId, String fileName, String storagePath, String storedFileName, String mimeType, long fileSizeBytes, long accountId, OffsetDateTime createdAt) {
         this.fileId = fileId;
         this.fileName = fileName;
         this.storagePath = storagePath;
@@ -26,7 +26,7 @@ public class FileMetadata {
         this.createdAt = createdAt;
     }
 
-    public FileMetadata(int accountId, String fileName, MultipartFile file, String storagePath, String storedFileName, OffsetDateTime createdAt) {
+    public FileMetadata(long accountId, String fileName, MultipartFile file, String storagePath, String storedFileName, OffsetDateTime createdAt) {
         this.fileName = fileName;
         this.storagePath = storagePath;
         this.storedFileName = storedFileName;

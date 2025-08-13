@@ -32,7 +32,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         }
 
         try {
-            int accountId = CoerSecurity.getInstance().getSubjectFromTokenAsInt(token);
+            long accountId = CoerSecurity.getInstance().getSubjectFromTokenAsLong(token);
             if (accountId <= 0) {
                 response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid or expired token");
                 return false;

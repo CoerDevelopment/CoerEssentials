@@ -13,7 +13,7 @@ import java.util.Locale;
 
 public class Account {
 
-    public int accountId;
+    public long accountId;
     public String email;
     public OffsetDateTime createdAt;
     public LocalDate birthday;
@@ -42,7 +42,7 @@ public class Account {
     public Account() {
     }
 
-    public Account(int accountId, String email, OffsetDateTime createdAt, LocalDate birthday, String firstName, String lastName, String username, String phoneNumber, String nationality, String location, Locale locale, CurrencyUnit preferredCurrency, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
+    public Account(long accountId, String email, OffsetDateTime createdAt, LocalDate birthday, String firstName, String lastName, String username, String phoneNumber, String nationality, String location, Locale locale, CurrencyUnit preferredCurrency, String instagramUrl, String twitterUrl, String facebookUrl, String linkedinUrl, String websiteUrl, String aboutMe, String profilePictureUrl, boolean isPrivate, boolean isLocked, boolean mailVerified) {
         this.accountId = accountId;
         this.email = email;
         this.createdAt = createdAt;

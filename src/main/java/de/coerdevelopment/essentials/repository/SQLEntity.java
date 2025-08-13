@@ -31,7 +31,7 @@ public class SQLEntity {
     public String getSQL(SQLDialect dialect) {
         String sql = name;
         if (isAutoIncrement && dialect.equals(SQLDialect.POSTGRESQL)) {
-            sql += " SERIAL";
+            sql += " BIGSERIAL";
         } else {
             sql += " " + type;
         }

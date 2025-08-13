@@ -73,7 +73,7 @@ public class AccountLoginRepository extends Repository {
             @Override
             public AccountLogin getObjectFromResultSetEntry(ResultSet resultSet) throws SQLException {
                 return new AccountLogin(
-                        resultSet.getInt("login_id"),
+                        resultSet.getLong("login_id"),
                         resultSet.getString("mail"),
                         resultSet.getObject("login_at", OffsetDateTime.class),
                         resultSet.getBoolean("success"),

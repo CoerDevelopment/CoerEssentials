@@ -35,9 +35,9 @@ public abstract class FileStorage {
      * @return the path or identifier of the stored file
      * @throws IOException if an error occurs during storage
      */
-    public abstract String store(int accountId, MultipartFile file, String fileName) throws IOException;
+    public abstract String store(long accountId, MultipartFile file, String fileName) throws IOException;
 
-    public String store(int accountId, MultipartFile file) throws IOException {
+    public String store(long accountId, MultipartFile file) throws IOException {
         return store(accountId, file, file.getOriginalFilename());
     }
 
@@ -45,12 +45,12 @@ public abstract class FileStorage {
      * Loads a file from the storage
      * @param fileName the name of the file to load
      */
-    public abstract Resource load(int accountId, String fileName);
+    public abstract Resource load(long accountId, String fileName);
 
     /**
      * Deletes a file from the storage
      */
-    public abstract void delete(int accountId, String fileName);
+    public abstract void delete(long accountId, String fileName);
 
     /**
      * Returns the current used storage size in bytes
