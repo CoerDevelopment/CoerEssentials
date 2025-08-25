@@ -24,7 +24,15 @@ public enum ModuleType {
             "password", "password",
             "fromMail", "from"
     ), List.of()),
-    ACCOUNT("Account", getAccountOptions(), List.of(SQL, MAIL));
+    ACCOUNT("Account", getAccountOptions(), List.of(SQL, MAIL)),
+    REDIS("Redis", Map.of(
+            "host", "localhost",
+            "port", 6379,
+            "username", "",
+            "password", "",
+            "database", 0,
+            "maxPoolSize", 2
+    ), List.of());
 
     public String name;
     public Map<String, Object> options;

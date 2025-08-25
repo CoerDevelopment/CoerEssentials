@@ -6,12 +6,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class UrlHelper {
 
-    private CacheManager urlCache;
+    private CoerCache urlCache;
     private boolean cacheEnabled;
     private Map<String, String> headers;
     private boolean cooldownEnabled;
@@ -23,10 +25,10 @@ public class UrlHelper {
 
     private int currentRequests;
     
-    public UrlHelper(int cacheTtl) {
-        cacheEnabled = cacheTtl <= 0;
+    public UrlHelper(int cacheTtlSeconds) {
+        cacheEnabled = cacheTtlSeconds <= 0;
         if (cacheEnabled) {
-            urlCache = new CacheManager(cacheTtl);
+            urlCache = new CoerCache("urlCache", Duration.ofSeconds(cacheTtlSeconds), String.class);
         }
         headers = new HashMap<>();
         cooldownEnabled = false;
@@ -45,9 +47,9 @@ public class UrlHelper {
         if (!cacheEnabled) {
             return readFromUrl(urlString);
         }
-        return (String) urlCache.getObject(urlString, new CacheAction() {
+        return (String) urlCache.getOrLoad(urlString, new Supplier() {
             @Override
-            public Object createObject() {
+            public String get() {
                 return readFromUrl(urlString);
             }
         });

@@ -4,8 +4,7 @@ import de.coerdevelopment.essentials.job.JobExecutor;
 import de.coerdevelopment.essentials.module.*;
 import de.coerdevelopment.essentials.module.Module;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CoerEssentials {
 
@@ -29,13 +28,13 @@ public class CoerEssentials {
     private String programName;
     public String configDirectory;
     private System.Logger logger;
-    private Map<ModuleType, Module> modulesCache;
+    private ConcurrentHashMap<ModuleType, Module> modulesCache;
 
     private CoerEssentials(String programName) {
         configDirectory = System.getProperty("user.home") + "/CoerEssentials/";
         logger = System.getLogger("CoerEssentials");
         this.programName = programName;
-        this.modulesCache = new HashMap<>();
+        this.modulesCache = new ConcurrentHashMap<>();
     }
 
     public Module enableModule(ModuleType moduleType) {
@@ -43,6 +42,7 @@ public class CoerEssentials {
             case SQL -> new SQLModule();
             case ACCOUNT -> new AccountModule();
             case MAIL -> new MailModule();
+            case REDIS -> new RedisModule();
         };
     }
 
@@ -89,6 +89,15 @@ public class CoerEssentials {
             modulesCache.put(ModuleType.SQL, genericModule);
         }
         return (SQLModule) genericModule;
+    }
+
+    public RedisModule getRedisModule() {
+        Module genericModule = modulesCache.get(ModuleType.REDIS);
+        if (genericModule == null) {
+            genericModule = getModule(ModuleType.REDIS);
+            modulesCache.put(ModuleType.REDIS, genericModule);
+        }
+        return (RedisModule) genericModule;
     }
 
     public void startExecutingJobs() {

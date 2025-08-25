@@ -1,11 +1,12 @@
 package de.coerdevelopment.essentials.utils;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class DynamicTTLCache<K, V> {
+public class InMemoryCoerCache<K, V> {
 
     private static class CacheEntry<V> {
         final V value;
@@ -22,13 +23,19 @@ public class DynamicTTLCache<K, V> {
     }
 
     private final long CLEANUP_INTERVAL_SECONDS = 60;
+    private final Duration defaultTtl;
     private final ConcurrentHashMap<K, CacheEntry<V>> store = new ConcurrentHashMap<>();
 
-    public DynamicTTLCache() {
+    public InMemoryCoerCache(Duration defaultTtl) {
+        this.defaultTtl = defaultTtl;
         Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
                 this::cleanup,
                 CLEANUP_INTERVAL_SECONDS, CLEANUP_INTERVAL_SECONDS, TimeUnit.SECONDS
         );
+    }
+
+    public void put(K key, V value) {
+        put(key, value, this.defaultTtl.getSeconds());
     }
 
     public void put(K key, V value, long ttlSeconds) {

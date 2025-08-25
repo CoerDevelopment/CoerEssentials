@@ -1,6 +1,6 @@
 package de.coerdevelopment.essentials.rest;
 
-import de.coerdevelopment.essentials.utils.DynamicTTLCache;
+import de.coerdevelopment.essentials.utils.CoerCache;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
@@ -10,6 +10,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -22,12 +23,12 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
     public static final String IDEMPOTENCY_TTL_SECONDS = "Idempotency-TTL-Seconds";
     private static final long TIMEOUT_MILLISECONDS = 10000;
 
-    private final DynamicTTLCache<String, ResponseEntity<?>> dynamicCache;
+    private final CoerCache<ResponseEntity> cache;
     private final ConcurrentHashMap<String, CompletableFuture<ResponseEntity<?>>> inFlightRequests;
 
 
     public IdempotencyInterceptor() {
-        this.dynamicCache = new DynamicTTLCache<>();
+        this.cache = new CoerCache<ResponseEntity>("idempotencyCache", Duration.ofMinutes(5), ResponseEntity.class);
         this.inFlightRequests = new ConcurrentHashMap<>();
     }
 
@@ -49,7 +50,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        ResponseEntity<?> cached = dynamicCache.get(key);
+        ResponseEntity<?> cached = cache.get(key);
         if (cached != null) {
             writeResponse(response, cached);
             return false;
@@ -78,7 +79,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
     }
 
     public void cacheResponse(String key, ResponseEntity<?> response, long ttlSeconds) {
-        dynamicCache.put(key, response, ttlSeconds);
+        cache.put(key, response, Duration.ofSeconds(ttlSeconds));
         CompletableFuture<ResponseEntity<?>> future = inFlightRequests.get(key);
         if (future != null && !future.isDone()) {
             future.complete(response);

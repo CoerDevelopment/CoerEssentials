@@ -11,6 +11,7 @@ import de.coerdevelopment.essentials.repository.AccountLoginRepository;
 import de.coerdevelopment.essentials.repository.AccountRepository;
 import de.coerdevelopment.essentials.repository.LocalFileStorageRepository;
 import de.coerdevelopment.essentials.security.CoerSecurity;
+import de.coerdevelopment.essentials.utils.CoerCache;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,7 +33,7 @@ public class AccountModule extends Module {
     private MailModule mailModule;
     private ConcurrentHashMap<Long, Integer> restUsagePerAccountInShortTime;
     private FileStorage profilePictureStorage;
-    private ConcurrentHashMap<Long, Account> accountsById;
+    private CoerCache<Account> accountsCache;
     private List<String> blacklistedRefreshTokens;
 
     // Options
@@ -101,7 +102,7 @@ public class AccountModule extends Module {
             throw new RuntimeException("Failed to initialize profile picture storage", e);
         }
 
-        accountsById = new ConcurrentHashMap<>();
+        accountsCache = new CoerCache("accounts", null, Account.class);
 
         JobExecutor.registerJob(new AccountLoginHistoryJob());
         JobExecutor.registerJob(new AccountCacheJob());
@@ -126,8 +127,9 @@ public class AccountModule extends Module {
         try {
             accountId = accountRepository.insertAccount(email, passwordHash, salt, locale);
             Account account = accountRepository.getAccount(accountId);
-            accountsById.put(accountId, account);
+            accountsCache.put(String.valueOf(accountId), account);
         } catch (Exception e) {
+            e.printStackTrace();
             CoerEssentials.getInstance().logWarning("Error creating account: " + e.getMessage());
             return false;
         }
@@ -301,12 +303,18 @@ public class AccountModule extends Module {
 
     public void lockAccount(long accountId) {
         accountRepository.setProperty(accountId, "is_locked", true);
-        accountsById.get(accountId).isLocked = true;
+        String key = String.valueOf(accountId);
+        Account account = accountsCache.get(key);
+        account.isLocked = true;
+        accountsCache.put(key, account);
     }
 
     public void unlockAccount(long accountId) {
         accountRepository.setProperty(accountId, "is_locked", false);
-        accountsById.get(accountId).isLocked = false;
+        String key = String.valueOf(accountId);
+        Account account = accountsCache.get(key);
+        account.isLocked = false;
+        accountsCache.put(key, account);
     }
 
     public String uploadProfilePicture(long accountId, MultipartFile file) throws IOException {
@@ -330,7 +338,7 @@ public class AccountModule extends Module {
         boolean success = accountRepository.updateAccount(accountId, account);
         if(success) {
             Account updatedAccount = accountRepository.getAccount(accountId);
-            accountsById.put(accountId, updatedAccount);
+            accountsCache.put(String.valueOf(accountId), updatedAccount);
             return updatedAccount;
         } else {
             throw new Exception("Unable to update account");
@@ -443,14 +451,18 @@ public class AccountModule extends Module {
      * Returns the account with the given id
      */
     public Account getAccount(long accountId) {
-        return accountsById.get(accountId);
+        return accountsCache.get(String.valueOf(accountId));
     }
 
     /**
      * Deletes the account
      */
     public ResponseEntity deleteAccount(long accountId) {
-        return accountRepository.deleteAccount(accountId) ?
+        boolean deleted =  accountRepository.deleteAccount(accountId);
+        if (deleted) {
+            accountsCache.invalidate(String.valueOf(accountId));
+        }
+        return deleted ?
                 ResponseEntity.ok("Account have been deleted") :
                 ResponseEntity.badRequest().body("Unable to delete account");
     }
@@ -467,8 +479,12 @@ public class AccountModule extends Module {
     }
 
     public int updateAccounts() {
-        accountsById.clear();
-        accountsById = accountRepository.getAllAccountsById();
+        Map<Long, Account> accounts = accountRepository.getAllAccountsById();
+        Map<String, Account> accountsById = new HashMap<>();
+        for (Long accountId : accounts.keySet()) {
+            accountsById.put(String.valueOf(accountId), accounts.get(accountId));
+        }
+        accountsCache.putMany(accountsById);
         return accountsById.size();
     }
 
