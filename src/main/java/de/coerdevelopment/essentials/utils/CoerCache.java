@@ -82,8 +82,16 @@ public final class CoerCache<T> {
         }
     }
 
+    public void put(Long key, T value, Duration ttl) {
+        put(String.valueOf(key), value, ttl);
+    }
+
     public void put(String key, T value) {
         put(key, value, this.defaultTtl);
+    }
+
+    public void put(Long key, T value) {
+        put(String.valueOf(key), value);
     }
 
     public boolean contains(String key) {
