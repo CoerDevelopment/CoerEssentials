@@ -60,6 +60,10 @@ public final class CoerCache<T> {
         return deserialize(value);
     }
 
+    public T get(Long key) {
+        return get(String.valueOf(key));
+    }
+
     public T getOrLoad(String key, Duration ttl, Supplier<T> loader) {
         T value = get(key);
         if (value == null) {
@@ -69,8 +73,16 @@ public final class CoerCache<T> {
         return value;
     }
 
+    public T getOrLoad(Long key, Duration ttl, Supplier<T> loader) {
+        return getOrLoad(String.valueOf(key), ttl, loader);
+    }
+
     public T getOrLoad(String key, Supplier<T> loader) {
         return getOrLoad(key, this.defaultTtl, loader);
+    }
+
+    public T getOrLoad(Long key, Supplier<T> loader) {
+        return getOrLoad(String.valueOf(key), loader);
     }
 
     public void put(String key, T value, Duration ttl) {
@@ -131,6 +143,11 @@ public final class CoerCache<T> {
             }
         }
         return result;
+    }
+
+    public Map<String, T> getMany(List<Long> keys) {
+        List<String> stringKeys = keys.stream().map(String::valueOf).toList();
+        return getMany(stringKeys);
     }
 
     public void putMany(Map<String, T> values) {
