@@ -25,10 +25,10 @@ public class UrlHelper {
 
     private int currentRequests;
     
-    public UrlHelper(int cacheTtlSeconds) {
-        cacheEnabled = cacheTtlSeconds <= 0;
+    public UrlHelper(Duration ttl) {
+        cacheEnabled = ttl.toMillis() > 0;
         if (cacheEnabled) {
-            urlCache = new CoerCache("urlCache", Duration.ofSeconds(cacheTtlSeconds), String.class);
+            urlCache = new CoerCache("urlCache", ttl, String.class);
         }
         headers = new HashMap<>();
         cooldownEnabled = false;
@@ -40,7 +40,7 @@ public class UrlHelper {
     }
 
     public UrlHelper() {
-        this(-1);
+        this(Duration.ZERO);
     }
 
     public String getJsonFromUrl(String urlString) {

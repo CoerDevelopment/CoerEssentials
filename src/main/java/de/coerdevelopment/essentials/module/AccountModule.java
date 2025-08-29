@@ -11,6 +11,7 @@ import de.coerdevelopment.essentials.repository.AccountLoginRepository;
 import de.coerdevelopment.essentials.repository.AccountRepository;
 import de.coerdevelopment.essentials.repository.LocalFileStorageRepository;
 import de.coerdevelopment.essentials.security.CoerSecurity;
+import de.coerdevelopment.essentials.security.TokenClaimAction;
 import de.coerdevelopment.essentials.utils.CoerCache;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +55,10 @@ public class AccountModule extends Module {
     private long spamProtectionTimeFrameMilliseconds;
     private int spamProtectionMaxRequests;
 
+    private List<TokenClaimAction> tokenClaimActions;
+    private List<AccountAction> onAccountCreatedActions;
+    private List<AccountAction> onAccountDeletedActions;
+
     public AccountModule() {
         super(ModuleType.ACCOUNT);
         this.tableName = getStringOption("tableName");
@@ -73,6 +78,11 @@ public class AccountModule extends Module {
         this.spamProtectionTimeFrameMilliseconds = getLongOption("spamProtectionTimeFrameMilliseconds");
         this.spamProtectionMaxRequests = getIntOption("spamProtectionMaxRequests");
 
+        this.tokenClaimActions = new ArrayList<>();
+        this.onAccountCreatedActions = new ArrayList<>();
+        this.onAccountDeletedActions = new ArrayList<>();
+        this.onAccountCreatedActions = new ArrayList<>();
+        this.onAccountDeletedActions = new ArrayList<>();
         this.accountRepository = new AccountRepository(tableName);
         this.blacklistedRefreshTokens = new ArrayList<>();
         this.accountLoginRepository = AccountLoginRepository.getInstance();
@@ -112,9 +122,17 @@ public class AccountModule extends Module {
      * Creates a new account if the mail is not already in use
      * @return true if the account was created, otherwise false
      */
-    public boolean createAccount(String email, String password, Locale locale) {
+    public boolean createAccount(String email, String password, Locale locale, String username, String firstName, String lastName) {
         // check if this mail is already associated with an account
         if (accountRepository.doesEmailExists(email)) {
+            return false;
+        }
+
+        if (username != null && accountRepository.doesUsernameExists(username)) {
+            return false;
+        }
+
+        if (username != null && username.contains("@")) {
             return false;
         }
 
@@ -124,10 +142,11 @@ public class AccountModule extends Module {
 
         // create the account in database
         long accountId;
+        Account account;
         try {
-            accountId = accountRepository.insertAccount(email, passwordHash, salt, locale);
-            Account account = accountRepository.getAccount(accountId);
-            accountsCache.put(String.valueOf(accountId), account);
+            accountId = accountRepository.insertAccount(email, passwordHash, salt, locale, username, firstName, lastName);
+            account = accountRepository.getAccount(accountId);
+            accountsCache.put(accountId, account);
         } catch (Exception e) {
             e.printStackTrace();
             CoerEssentials.getInstance().logWarning("Error creating account: " + e.getMessage());
@@ -138,14 +157,18 @@ public class AccountModule extends Module {
         if (mailConfirmationEnabled) {
             sendEmailVerification(accountId);
         }
+
+        for (AccountAction action : onAccountCreatedActions) {
+            action.execute(account);
+        }
         return true;
     }
 
     /**
      * Checks the provided credentials and returns the account id if they are correct
      */
-    public long login(String email, String passwordHash) throws Exception {
-        return accountRepository.getAccountIdIfPasswortMatches(email, passwordHash);
+    public long login(String emailOrUsername, String passwordHash) throws Exception {
+        return accountRepository.getAccountIdIfPasswortMatches(emailOrUsername, passwordHash);
     }
 
     /**
@@ -160,7 +183,22 @@ public class AccountModule extends Module {
         claims.put("locale", account.locale.toLanguageTag());
         claims.put("defaultCurrency", account.preferredCurrency.getCurrencyCode());
         claims.put("emailVerified", account.mailVerified);
+        for (TokenClaimAction action : tokenClaimActions) {
+            action.addClaim(claims);
+        }
         return CoerSecurity.getInstance().createToken(String.valueOf(account.accountId), claims);
+    }
+
+    public void addTokenClaimAction(TokenClaimAction action) {
+        tokenClaimActions.add(action);
+    }
+
+    public void addOnAccountCreatedAction(AccountAction action) {
+        onAccountCreatedActions.add(action);
+    }
+
+    public void addOnAccountDeletedAction(AccountAction action) {
+        onAccountDeletedActions.add(action);
     }
 
     public void blacklistRefreshToken(String token) {
@@ -460,7 +498,11 @@ public class AccountModule extends Module {
     public ResponseEntity deleteAccount(long accountId) {
         boolean deleted =  accountRepository.deleteAccount(accountId);
         if (deleted) {
-            accountsCache.invalidate(String.valueOf(accountId));
+            Account account = accountsCache.get(accountId);
+            for (AccountAction action : onAccountDeletedActions) {
+                action.execute(account);
+            }
+            accountsCache.invalidate(accountId);
         }
         return deleted ?
                 ResponseEntity.ok("Account have been deleted") :

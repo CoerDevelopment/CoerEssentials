@@ -145,13 +145,22 @@ public final class CoerCache<T> {
         return result;
     }
 
-    public Map<String, T> getMany(List<Long> keys) {
+    public Map<Long, T> getMany(List<Long> keys) {
         List<String> stringKeys = keys.stream().map(String::valueOf).toList();
-        return getMany(stringKeys);
+        Map<String, T> result = getMany(stringKeys);
+        Map<Long, T> longKeyedMap = new HashMap<>();
+        for (Map.Entry<String, T> entry : result.entrySet()) {
+            longKeyedMap.put(Long.parseLong(entry.getKey()), entry.getValue());
+        }
+        return longKeyedMap;
     }
 
     public void putMany(Map<String, T> values) {
         putMany(values, this.defaultTtl);
+    }
+
+    public void putManyByLong(Map<Long, T> values) {
+        putManyByLong(values, this.defaultTtl);
     }
 
     public void putMany(Map<String, T> values, Duration ttl) {
@@ -160,8 +169,20 @@ public final class CoerCache<T> {
         }
     }
 
+    public void putManyByLong(Map<Long, T> values, Duration ttl) {
+        Map<String, T> stringKeyedMap = new HashMap<>();
+        for (Map.Entry<Long, T> entry : values.entrySet()) {
+            stringKeyedMap.put(String.valueOf(entry.getKey()), entry.getValue());
+        }
+        putMany(stringKeyedMap, ttl);
+    }
+
     public void invalidate(String key) {
         redis.del(namespace(key));
+    }
+
+    public void invalidate(Long key) {
+        invalidate(String.valueOf(key));
     }
 
     public void invalidateAll() {

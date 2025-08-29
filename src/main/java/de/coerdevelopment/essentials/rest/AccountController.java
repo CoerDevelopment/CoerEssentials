@@ -8,6 +8,7 @@ import de.coerdevelopment.essentials.job.instances.AccountLoginHistoryJob;
 import de.coerdevelopment.essentials.module.AccountModule;
 import de.coerdevelopment.essentials.repository.LocalFileStorageRepository;
 import de.coerdevelopment.essentials.security.CoerSecurity;
+import de.coerdevelopment.essentials.utils.CoerCache;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;
@@ -15,24 +16,16 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/account")
 public class AccountController {
 
-    private static Map<String, Integer> failedLoginAttemptsPerMail = new HashMap<>();
-    private static Map<String, Integer> passwordResetAttemptsPerMail = new HashMap<>();
-    private static Map<String, LocalDateTime> accountLoginLocks = new HashMap<>();
-    private static Map<String, LocalDateTime> passwordResetLocks = new HashMap<>();
-    private static final long LOCK_DURATION_SECONDS = TimeUnit.MINUTES.toSeconds(5);
+    private static CoerCache<Integer> failedLoginAttemptsCache = new CoerCache<>("failedLoginAttempts", Duration.ofMinutes(10), Integer.class);
+    private static CoerCache<Integer> passwordResetAttemptsCache = new CoerCache<>("passwordResetAttempts", Duration.ofMinutes(10), Integer.class);
 
     /**
      * Creates a new account
@@ -40,10 +33,10 @@ public class AccountController {
      */
     @IdempotentRequest
     @PostMapping()
-    public ResponseEntity<String> createAccount(@RequestBody AccountCredentialsRequest request) {
+    public ResponseEntity<String> createAccount(@RequestBody AccountCreationRequest request) {
         request.email = request.email.toLowerCase(Locale.ROOT);
-        if (getAccountModule().createAccount(request.email, request.password, request.locale)) {
-            return login(request);
+        if (getAccountModule().createAccount(request.email, request.password, request.locale, request.username, request.firstName, request.lastName)) {
+            return login(new AccountLoginRequest(request.email, request.password));
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Unable to create the account. Maybe there is already an account with this mail.");
         }
@@ -73,29 +66,30 @@ public class AccountController {
     }
 
     @PostMapping("/security/login")
-    public ResponseEntity<String> login(@RequestBody AccountCredentialsRequest request) {
-        request.email = request.email.toLowerCase(Locale.ROOT);
-        if (accountLoginLocks.containsKey(request.email)) {
-            if (accountLoginLocks.get(request.email).isAfter(LocalDateTime.now())) {
-                return ResponseEntity.status(HttpStatus.LOCKED).body("Account is locked temporarily due too many failed login attempts. Try again later.");
-            } else {
-                accountLoginLocks.remove(request.email);
-            }
+    public ResponseEntity<String> login(@RequestBody AccountLoginRequest request) {
+        if (request.emailOrUsername == null || request.emailOrUsername.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email/Username is required");
+        }
+        if (request.isEmail()) {
+            request.emailOrUsername = request.emailOrUsername.toLowerCase(Locale.ROOT);
+        }
+        if (failedLoginAttemptsCache.contains(request.emailOrUsername) && failedLoginAttemptsCache.get(request.emailOrUsername) >= getAccountModule().maxLoginTriesInShortTime) {
+            return ResponseEntity.status(HttpStatus.LOCKED).body("Account is locked temporarily due too many failed login attempts. Try again later.");
         }
         long accountId = -1;
         try {
-            accountId = getAccountModule().login(request.email, request.password);
+            accountId = getAccountModule().login(request.emailOrUsername, request.password);
         } catch (Exception e) {
             CoerEssentials.getInstance().logError(e.getMessage());
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.email, OffsetDateTime.now(), false, e.getMessage()));
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.emailOrUsername, OffsetDateTime.now(), false, e.getMessage()));
         }
         Account account = getAccountModule().getAccount(accountId);
         if (account != null && account.isLocked) {
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.email, OffsetDateTime.now(), false, "Account is locked"));
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.emailOrUsername, OffsetDateTime.now(), false, "Account is locked"));
             return ResponseEntity.status(HttpStatus.LOCKED).body("Account is locked");
         }
         if (account != null) {
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.email, OffsetDateTime.now(), accountId != -1, ""));
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.emailOrUsername, OffsetDateTime.now(), accountId != -1, ""));
             final long TOKEN_EXPIRATION = getAccountModule().refreshTokenExpiration;
             String refreshToken = CoerSecurity.getInstance().createToken(accountId, TOKEN_EXPIRATION);
             ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
@@ -110,21 +104,12 @@ public class AccountController {
             return response;
         } else {
             // save failed login attempts
-            failedLoginAttemptsPerMail.put(request.email, failedLoginAttemptsPerMail.getOrDefault(request.email, 0) + 1);
-            if (failedLoginAttemptsPerMail.get(request.email) >= getAccountModule().maxLoginTriesInShortTime) {
-                accountLoginLocks.put(request.email, LocalDateTime.now().plusSeconds(LOCK_DURATION_SECONDS));
+            Integer currentAttempts = failedLoginAttemptsCache.get(request.emailOrUsername);
+            if (currentAttempts == null) {
+                currentAttempts = 0;
             }
-            ScheduledExecutorService lockScheduler = Executors.newScheduledThreadPool(1);
-            lockScheduler.schedule(() -> {
-                int currentAttemps = failedLoginAttemptsPerMail.getOrDefault(request.email, 0);
-                if (currentAttemps <= 1) {
-                    failedLoginAttemptsPerMail.remove(request.email);
-                } else {
-                    failedLoginAttemptsPerMail.put(request.email, Math.max(0, currentAttemps - 1));
-                }
-            }, LOCK_DURATION_SECONDS, TimeUnit.SECONDS);
-
-            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.email, OffsetDateTime.now(), false, "Invalid credentials"));
+            failedLoginAttemptsCache.put(request.emailOrUsername, currentAttempts + 1);
+            AccountLoginHistoryJob.loginsToBeProcessed.add(new AccountLogin(request.emailOrUsername, OffsetDateTime.now(), false, "Invalid credentials"));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
     }
@@ -159,28 +144,15 @@ public class AccountController {
     @PostMapping("/security/requestpasswordreset/{email}")
     public void requestPasswordReset(@PathVariable("email") String email) {
         email = email.toLowerCase(Locale.ROOT);
-        if (passwordResetLocks.containsKey(email)) {
-            if (passwordResetLocks.get(email).isAfter(LocalDateTime.now())) {
-                return;
-            } else {
-                passwordResetLocks.remove(email);
+        if (passwordResetAttemptsCache.contains(email)) {
+            if (passwordResetAttemptsCache.get(email) >= getAccountModule().maxPasswordResetTriesInShortTime) {
+                throw new RuntimeException("Too many password reset requests in a short time. Try again later.");
             }
+            passwordResetAttemptsCache.put(email, passwordResetAttemptsCache.get(email) + 1);
+        } else {
+            passwordResetAttemptsCache.put(email, 1);
         }
         getAccountModule().sendPasswordReset(email);
-        passwordResetAttemptsPerMail.put(email, passwordResetAttemptsPerMail.getOrDefault(email, 0) + 1);
-        if (passwordResetAttemptsPerMail.get(email) >= getAccountModule().maxPasswordResetTriesInShortTime) {
-            passwordResetLocks.put(email, LocalDateTime.now().plusSeconds(LOCK_DURATION_SECONDS));
-        }
-        ScheduledExecutorService lockScheduler = Executors.newScheduledThreadPool(1);
-        String finalEmail = email;
-        lockScheduler.schedule(() -> {
-            int currentAttemps = passwordResetAttemptsPerMail.getOrDefault(finalEmail, 0);
-            if (currentAttemps <= 1) {
-                passwordResetAttemptsPerMail.remove(finalEmail);
-            } else {
-                passwordResetAttemptsPerMail.put(finalEmail, Math.max(0, currentAttemps - 1));
-            }
-        }, LOCK_DURATION_SECONDS, TimeUnit.SECONDS);
     }
 
     @CrossOrigin
@@ -255,12 +227,32 @@ public class AccountController {
         }
     }
 
-    public static class AccountCredentialsRequest {
+    public static class AccountCreationRequest {
         public String email;
         public String password;
+        public String firstName;
+        public String lastName;
+        public String username;
         public Locale locale;
 
-        public AccountCredentialsRequest() {
+        public AccountCreationRequest() {
+        }
+    }
+
+    public static class AccountLoginRequest {
+        public String emailOrUsername;
+        public String password;
+
+        public AccountLoginRequest() {
+        }
+
+        public AccountLoginRequest(String emailOrUsername, String password) {
+            this.emailOrUsername = emailOrUsername;
+            this.password = password;
+        }
+
+        public boolean isEmail() {
+            return emailOrUsername.contains("@");
         }
     }
 

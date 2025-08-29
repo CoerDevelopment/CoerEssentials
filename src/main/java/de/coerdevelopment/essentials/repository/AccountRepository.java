@@ -55,9 +55,9 @@ public class AccountRepository extends Repository {
         sql.executeQuery(table.getCreateTableStatement());
     }
 
-    public long insertAccount(String email, String password, String salt, Locale locale) {
+    public long insertAccount(String email, String password, String salt, Locale locale, String username, String firstName, String lastName) {
         AtomicLong accountId = new AtomicLong(-1);
-        sql.executeQueryReturningKeys("INSERT INTO " + tableName + " (email, password, salt, created_at, locale, preferred_currency) VALUES (?, ?, ?, ?, ?, ?)", new StatementCustomAction() {
+        sql.executeQueryReturningKeys("INSERT INTO " + tableName + " (email, password, salt, created_at, locale, preferred_currency, username, first_name, last_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getGeneratedKeys();
@@ -65,7 +65,7 @@ public class AccountRepository extends Repository {
                     accountId.set(rs.getLong(1));
                 }
             }
-        }, email, password, salt, OffsetDateTime.now(), locale.toLanguageTag(), Monetary.getCurrency(locale).getCurrencyCode());
+        }, email, password, salt, OffsetDateTime.now(), locale.toLanguageTag(), Monetary.getCurrency(locale).getCurrencyCode(), username, firstName, lastName);
         return accountId.get();
     }
 
@@ -92,6 +92,18 @@ public class AccountRepository extends Repository {
                 exists.set(rs.next());
             }
         }, email);
+        return exists.get();
+    }
+
+    public boolean doesUsernameExists(String username) {
+        AtomicBoolean exists = new AtomicBoolean(false);
+        sql.executeQuery("SELECT account_id FROM " + tableName + " WHERE username = ?", new StatementCustomAction() {
+            @Override
+            public void onAfterExecute(PreparedStatement statement) throws SQLException {
+                ResultSet rs = statement.getResultSet();
+                exists.set(rs.next());
+            }
+        }, username);
         return exists.get();
     }
 
@@ -173,11 +185,11 @@ public class AccountRepository extends Repository {
      * Checks if the given credentials are correct and returns the accountId if they are
      * Otherwise an exception is thrown
      */
-    public long getAccountIdIfPasswortMatches(String email, String password) throws Exception {
+    public long getAccountIdIfPasswortMatches(String emailOrUsername, String password) throws Exception {
         AtomicBoolean matches = new AtomicBoolean(false);
         AtomicBoolean accountExists = new AtomicBoolean(false);
         AtomicLong accountId = new AtomicLong(-1);
-        PreparedStatement statement = sql.executeQuery("SELECT account_id, password, salt FROM " + tableName + " WHERE email = ?", new StatementCustomAction() {
+        PreparedStatement statement = sql.executeQuery("SELECT account_id, password, salt FROM " + tableName + " WHERE email = ? OR username = ?", new StatementCustomAction() {
             @Override
             public void onAfterExecute(PreparedStatement statement) throws SQLException {
                 ResultSet rs = statement.getResultSet();
@@ -192,7 +204,7 @@ public class AccountRepository extends Repository {
                     }
                 }
             }
-        }, email);
+        }, emailOrUsername, emailOrUsername);
         if (!accountExists.get()) {
             throw new Exception("Account does not exist");
         }
