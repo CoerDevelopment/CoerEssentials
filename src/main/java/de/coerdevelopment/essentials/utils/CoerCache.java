@@ -12,6 +12,7 @@ import io.lettuce.core.api.sync.RedisCommands;
 import org.springframework.http.HttpStatusCode;
 
 import javax.money.CurrencyUnit;
+import javax.money.MonetaryAmount;
 import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.*;
@@ -29,12 +30,20 @@ public final class CoerCache<T> {
     private final Class<T> clazz;
     private final Type type;
 
+    public CoerCache(String prefix, Class<T> clazz) {
+        this(prefix, Duration.ZERO, clazz);
+    }
+
     public CoerCache(String prefix, Duration defaultTtl, Class<T> clazz) {
         this(prefix, defaultTtl, clazz, null);
     }
 
     public CoerCache(String prefix, Duration defaultTtl, Type type) {
         this(prefix, defaultTtl, null, type);
+    }
+
+    public CoerCache(String prefix, Type type) {
+        this(prefix, Duration.ZERO, type);
     }
 
     private CoerCache(String prefix, Duration defaultTtl, Class<T> clazz, Type type) {
@@ -47,6 +56,7 @@ public final class CoerCache<T> {
         this.gson = Converters.registerAll(new GsonBuilder()
                 .registerTypeAdapter(HttpStatusCode.class, new HttpStatusCodeAdapter())
                 .registerTypeAdapter(CurrencyUnit.class, new CurrencyUnitAdapter())
+                .registerTypeAdapter(MonetaryAmount.class, new MonetaryAmountAdapter())
         ).create();
         this.clazz = clazz;
         this.type = type;
@@ -83,6 +93,55 @@ public final class CoerCache<T> {
 
     public T getOrLoad(Long key, Supplier<T> loader) {
         return getOrLoad(String.valueOf(key), loader);
+    }
+
+    public List<T> getAll() {
+        final List<T> result = new ArrayList<>();
+        try {
+            final String match = prefix + ":*";
+            final ScanArgs scan = ScanArgs.Builder.matches(match).limit(10000);
+
+            String cursor = "0";
+            List<String> batch = new ArrayList<>(1000);
+
+            do {
+                KeyScanCursor<String> page = redis.scan(ScanCursor.of(cursor), scan);
+                cursor = page.getCursor();
+
+                for (String k : page.getKeys()) {
+                    batch.add(k);
+                    if (batch.size() >= 1000) {
+                        List<KeyValue<String, String>> values = redis.mget(batch.toArray(String[]::new));
+                        for (KeyValue<String, String> kv : values) {
+                            if (kv != null && kv.hasValue()) {
+                                try {
+                                    result.add(deserialize(kv.getValue()));
+                                } catch (Exception e) {
+                                    throw new RuntimeException("Failed to deserialize cache value", e);
+                                }
+                            }
+                        }
+                        batch.clear();
+                    }
+                }
+            } while (!"0".equals(cursor));
+
+            if (!batch.isEmpty()) {
+                List<KeyValue<String, String>> values = redis.mget(batch.toArray(String[]::new));
+                for (KeyValue<String, String> kv : values) {
+                    if (kv != null && kv.hasValue()) {
+                        try {
+                            result.add(deserialize(kv.getValue()));
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to deserialize cache value", e);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw e;
+        }
+        return result;
     }
 
     public void put(String key, T value, Duration ttl) {
